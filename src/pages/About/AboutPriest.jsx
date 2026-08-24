@@ -51,7 +51,7 @@ export const AboutPriest = () => {
 
   // 3. Main Dynamic Rendering
   return (
-    <section className="w-full py-12 lg:py-20 bg-[url('/src/assets/subtle-pattern-bg.png')] bg-repeat bg-[#fdfbf7] min-h-screen">
+    <section className="w-full py-12 lg:py-12 bg-[url('/src/assets/pattern-bg.jpg')]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="text-center mb-16">
@@ -67,11 +67,12 @@ export const AboutPriest = () => {
         </div>
 
         {/* Dynamic List Rendering */}
-        <div className="space-y-12 lg:space-y-16">
+        <div className="space-y-12 lg:space-y-12">
           {priests.map((priest, index) => (
             <div
               key={priest.id || index}
-              className="flex flex-col md:flex-row gap-8 lg:gap-12 items-start bg-white p-6 sm:p-8 lg:p-10 rounded-xl shadow-lg border border-red-50 transition-all duration-300 hover:shadow-xl group"
+              className="flex flex-col md:flex-row gap-8 lg:gap-12 items-start bg-white p-6 sm:p-8 lg:p-10 rounded-xl shadow-lg border transition-all duration-300 hover:shadow-xl group"
+              style={{ borderColor: APP_COLORS.primary }}
             >
               {/* Image Section */}
               <div className="w-full md:w-1/3 lg:w-[30%] flex-shrink-0">
