@@ -72,6 +72,16 @@ const AboutPriestPage = lazy(() =>
     default: module.AboutPriest,
   })),
 );
+const AboutDeityPage = lazy(() =>
+  import("./pages/About/AboutDeity").then((module) => ({
+    default: module.AboutDeity,
+  })),
+);
+const AboutTemplePage = lazy(() =>
+  import("./pages/About/AboutTemple").then((module) => ({
+    default: module.AboutTemple,
+  })),
+);
 // 5. Modern Data Router Configuration
 const router = createBrowserRouter([
   {
@@ -101,6 +111,30 @@ const router = createBrowserRouter([
             }
           >
             <AboutPriestPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "about-deities",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutDeityPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "about-temple",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutTemplePage />
           </Suspense>
         ),
       },
