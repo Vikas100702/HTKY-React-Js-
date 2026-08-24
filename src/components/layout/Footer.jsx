@@ -322,14 +322,6 @@ export const Footer = () => {
             >
               {APP_STRINGS.footerContactUs}
             </h3>
-
-            <button
-              className="px-6 py-2 rounded text-sm font-bold uppercase tracking-wider text-white shadow-md hover:opacity-90 transition-opacity mt-1 mb-2"
-              style={{ backgroundColor: APP_COLORS.primary }}
-            >
-              Contact Us
-            </button>
-
             <p
               className="text-base font-semibold text-gray-900 leading-snug"
               dangerouslySetInnerHTML={{ __html: footerData.address }}
@@ -363,6 +355,13 @@ export const Footer = () => {
                   </a>
                 </p>
               )}
+
+              <button
+                className="px-6 py-2 rounded text-sm font-bold uppercase tracking-wider text-white shadow-md hover:opacity-90 transition-opacity mt-1 mb-2"
+                style={{ backgroundColor: APP_COLORS.primary }}
+              >
+                Contact Us
+              </button>
             </div>
           </div>
         </div>
