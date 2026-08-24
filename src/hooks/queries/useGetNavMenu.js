@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { ENDPOINTS } from '../../constants/apiConstants';
 import { buildComponentConfigPayload } from '../../utils/apiPayloadBuilder';
-import { AboutPriest } from "../../pages/About/AboutPriest";
 
 /**
  * Fallback static menu array in case the API is offline or returns empty data.
