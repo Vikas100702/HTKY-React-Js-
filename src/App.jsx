@@ -82,6 +82,16 @@ const AboutTemplePage = lazy(() =>
     default: module.AboutTemple,
   })),
 );
+const AboutBoardCommitteePage = lazy(() =>
+  import("./pages/About/AboutBoardCommittee").then((module) => ({
+    default: module.AboutBoardCommittee,
+  })),
+);
+const AboutLandDonorsPage = lazy(() =>
+  import("./pages/About/AboutLandDonors").then((module) => ({
+    default: module.AboutLandDonors,
+  })),
+);
 // 5. Modern Data Router Configuration
 const router = createBrowserRouter([
   {
@@ -135,6 +145,30 @@ const router = createBrowserRouter([
             }
           >
             <AboutTemplePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "board-committee-members",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutBoardCommitteePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "land-donors",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutLandDonorsPage />
           </Suspense>
         ),
       },
