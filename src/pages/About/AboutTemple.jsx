@@ -86,7 +86,7 @@ export const AboutTemple = () => {
   };
 
   return (
-    <section className="w-full py-16 lg:py-16 bg-white">
+    <section className="w-full py-16 lg:py-16 bg-[url('/src/assets/pattern-bg.jpg')] bg-repeat bg-fill bg-top min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2
