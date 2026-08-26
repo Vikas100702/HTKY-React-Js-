@@ -1,21 +1,12 @@
-/**
- * @file src/pages/About/TempleEtiquette.jsx
- * @description Renders the Temple Etiquette, Tours, and Dress Code section.
- * Features a dynamic Tabbed UI and strictly avoids useEffect for state syncing (Derived State).
- */
-
 import { useState, useMemo } from "react";
 import { useGetEtiquetteVisit } from "../../hooks/queries/About/useGetEtiquetteVisits";
 import { APP_COLORS } from "../../constants/appColors";
-
-// Fallback divider image (consistent with your other pages)
 import dividerImg from "../../assets/border2.png";
 
 export const AboutEtiquetteVisit = () => {
-  // 1. Fetch Server State
   const { data: etiquetteVisitData, isLoading, isError } = useGetEtiquetteVisit();
 
-  // 2. Local UI State for Tab Selection
+  // Local UI State for Tab Selection
   const [selectedTab, setSelectedTab] = useState("");
 
   // 3. Extract Categories for Tabs dynamically
@@ -24,11 +15,11 @@ export const AboutEtiquetteVisit = () => {
     return etiquetteVisitData.map((item) => item.category).filter(Boolean);
   }, [etiquetteVisitData]);
 
-  // 4. Derived State: Auto-resolve Active Tab WITHOUT useEffect (Performance Optimized)
+  // Derived State: Auto-resolve Active Tab WITHOUT useEffect (Performance Optimized)
   const activeCategory =
     selectedTab || (categories.length > 0 ? categories[0] : "");
 
-  // 5. Get Content strictly for the Active Category
+  // Get Content strictly for the Active Category
   const activeContent = useMemo(() => {
     if (!etiquetteVisitData || !activeCategory) return [];
     const activeGroup = etiquetteVisitData.find(
@@ -37,9 +28,9 @@ export const AboutEtiquetteVisit = () => {
     return activeGroup?.items || [];
   }, [etiquetteVisitData, activeCategory]);
 
-  // ==========================================
+
   // SKELETON LOADER (Sub-100ms Perceived Performance)
-  // ==========================================
+
   if (isLoading) {
     return (
       <section className="w-full py-12 lg:py-20 bg-white min-h-[60vh]">
@@ -71,9 +62,9 @@ export const AboutEtiquetteVisit = () => {
     );
   }
 
-  // ==========================================
+
   // ERROR / EMPTY STATE
-  // ==========================================
+
   if (isError || !categories.length) {
     return (
       <section className="w-full py-20 flex justify-center items-center bg-white">
@@ -84,13 +75,10 @@ export const AboutEtiquetteVisit = () => {
     );
   }
 
-  // ==========================================
-  // MAIN RENDER
-  // ==========================================
   return (
     <section className="w-full py-12 lg:py-20 bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-cover bg-top">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* 1. Page Header matching Screenshots */}
+        {/* Page Header matching Screenshots */}
         <div className="text-center mb-10 flex flex-col items-center">
           <h2
             className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-wide"
@@ -101,7 +89,6 @@ export const AboutEtiquetteVisit = () => {
           >
             Temple Etiquette and Visits
           </h2>
-          {/* Decorative Divider */}
           <img
             src={dividerImg}
             alt="divider"
@@ -111,7 +98,7 @@ export const AboutEtiquetteVisit = () => {
           />
         </div>
 
-        {/* 2. Dynamic Tabs Row */}
+        {/* Dynamic Tabs Row */}
         <div className="flex flex-wrap gap-1 mb-0 relative z-10">
           {categories.map((category) => (
             <button
@@ -128,7 +115,7 @@ export const AboutEtiquetteVisit = () => {
           ))}
         </div>
 
-        {/* 3. Main Content Box */}
+        {/* Main Content Box */}
         <div className="bg-white border border-gray-200 rounded-b-xl rounded-tr-xl shadow-[0_4px_20px_-5px_rgba(0,0,0,0.1)] p-6 sm:p-8 md:p-10 w-full relative z-20">
           <ul
             className={`text-base md:text-lg text-gray-800 leading-relaxed font-medium ${
