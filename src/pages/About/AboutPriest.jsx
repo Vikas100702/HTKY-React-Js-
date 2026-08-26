@@ -51,7 +51,7 @@ export const AboutPriest = () => {
 
   // 3. Main Dynamic Rendering
   return (
-    <section className="w-full py-12 lg:py-12 bg-[url('/src/assets/pattern-bg.jpg')]">
+    <section className="w-full py-12 lg:py-12 bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-fill bg-top min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="text-center mb-16">
