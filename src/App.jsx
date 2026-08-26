@@ -92,6 +92,11 @@ const AboutLandDonorsPage = lazy(() =>
     default: module.AboutLandDonors,
   })),
 );
+const AboutEtiquetteVisitPage = lazy(() =>
+  import("./pages/About/AboutEtiquetteVisits").then((module) => ({
+    default: module.AboutEtiquetteVisit,
+  })),
+);
 // 5. Modern Data Router Configuration
 const router = createBrowserRouter([
   {
@@ -169,6 +174,18 @@ const router = createBrowserRouter([
             }
           >
             <AboutLandDonorsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "etiquette-visits",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutEtiquetteVisitPage />
           </Suspense>
         ),
       },
