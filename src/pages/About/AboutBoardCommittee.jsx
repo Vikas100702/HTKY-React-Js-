@@ -100,7 +100,7 @@ export const AboutBoardCommittee = () => {
   // MAIN RENDER (Dynamic Tabs & Grid)
   // ==========================================
   return (
-    <section className="w-full py-12 lg:py-16 bg-[#fdfbf7]">
+    <section className="w-full py-12 lg:py-16 bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-fill bg-top">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 1. Dynamic Tabs Row */}
         <div className="flex flex-wrap gap-1 mb-0 relative z-10">
