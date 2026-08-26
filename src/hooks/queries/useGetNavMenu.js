@@ -62,7 +62,7 @@ const DEFAULT_NAV_ITEMS = [
             { id: '8-3', title: 'ABOUT PRIESTS', path: '/about-priests' },
             { id: '8-4', title: 'LAND DONORS', path: '/land-donors' },
             { id: '8-5', title: 'BOARD & COMMITTEE MEMBERS', path: '/board-committee-members' },
-            { id: '8-6', title: 'TEMPLE ETIQUETTE & VISITS', path: '/temple-etiquette-visits' },
+            { id: '8-6', title: 'TEMPLE ETIQUETTE & VISITS', path: '/etiquette-visits' },
             { id: '8-7', title: 'JAIN-SANGH', path: '/jain-sangh' },
             { id: '8-8', title: 'SHIRDI SAI SATSANG', path: '/shirdi-sai-satsang' },
         ],
