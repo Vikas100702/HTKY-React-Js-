@@ -48,7 +48,7 @@ const DEFAULT_NAV_ITEMS = [
     {
         id: '7', title: 'SEVA', subMenu: [
             { id: '7-1', title: 'VOLUNTEER SIGNUP', path: '/volunteer-signup' },
-            { id: '7-2', title: 'SENIOR PAGE', path: '/senior-page' },
+            { id: '7-2', title: 'SENIOR Program', path: '/senior-program' },
             { id: '7-3', title: 'GRIEF SUPPORT', path: '/grief-support' },
             { id: '7-4', title: 'LOST AND FOUND', path: '/lost-found' },
         ]
