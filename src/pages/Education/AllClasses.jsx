@@ -12,9 +12,6 @@ export const AllClasses = () => {
   const { data, isLoading, isError } = useGetAllClasses();
   const primaryColor = APP_COLORS?.primary || "#900000";
 
-  // ==========================================
-  // SKELETON LOADER (Sub-100ms Perceived Performance)
-  // ==========================================
   if (isLoading) {
     return (
       <section className="w-full py-16 bg-[#fcfbf9] min-h-screen">
@@ -46,9 +43,9 @@ export const AllClasses = () => {
     );
   }
 
-  // ==========================================
+
   // ERROR / EMPTY STATE
-  // ==========================================
+
   if (isError || !data || data.length === 0) {
     return (
       <section className="w-full py-24 flex justify-center items-center bg-[#fcfbf9] min-h-[60vh]">
@@ -61,9 +58,6 @@ export const AllClasses = () => {
     );
   }
 
-  // ==========================================
-  // MAIN PREMIUM RENDER
-  // ==========================================
   return (
     <section className="w-full py-12 lg:py-16 bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-fill bg-top">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -89,7 +83,6 @@ export const AllClasses = () => {
               className="bg-white rounded-3xl p-6 sm:p-8 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] border hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col group relative overflow-hidden"
               style={{ borderColor: primaryColor }}
             >
-              {/* Decorative ambient background blur */}
               <div
                 className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"
                 style={{ backgroundColor: primaryColor }}
