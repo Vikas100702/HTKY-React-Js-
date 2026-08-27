@@ -69,7 +69,22 @@ const NotFoundFallback = () => (
 const HomePage = lazy(() => import("./pages/Home"));
 const AllClassesPage = lazy(() =>
   import("./pages/Education/AllClasses").then((module) => ({
-    default: module.AllClasses
+    default: module.AllClasses,
+  })),
+);
+const SeniorProgramPage = lazy(() =>
+  import("./pages/Seva/SeniorProgram").then((module) => ({
+    default: module.SeniorProgram,
+  })),
+);
+const GriefSupportPage = lazy(() =>
+  import("./pages/Seva/GriefSupport").then((module) => ({
+    default: module.GriefSupport,
+  })),
+);
+const LostFoundPage = lazy(() =>
+  import("./pages/Seva/LostFound").then((module) => ({
+    default: module.LostFound,
   })),
 );
 const AboutTemplePage = lazy(() =>
@@ -141,6 +156,42 @@ const router = createBrowserRouter([
             }
           >
             <AllClassesPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "senior-program",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <SeniorProgramPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "grief-support",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <GriefSupportPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "lost-found",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <LostFoundPage />
           </Suspense>
         ),
       },
