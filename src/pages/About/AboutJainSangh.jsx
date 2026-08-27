@@ -28,7 +28,6 @@ export const AboutJainSangh = () => {
     );
   }
 
-
   // ERROR / EMPTY STATE
 
   if (isError || !data) {
@@ -43,11 +42,10 @@ export const AboutJainSangh = () => {
     );
   }
 
-
   // MAIN PREMIUM RENDER
 
   return (
-    <section className="w-full min-h-screen bg-gradient-to-br from-amber-50/40 via-white to-orange-50/30 text-gray-800 py-12 lg:py-20 overflow-hidden">
+    <section className="w-full py-12 lg:py-20 bg-[url('/src/assets/pattern-bg.jpg')] bg-repeat bg-contain bg-top">
       <div className="w-full max-w-[1800px] mx-auto px-4 sm:px-8 lg:px-16 space-y-16">
         {/* 1. Hero Section (Image + Title & Schedule Bento Card) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
