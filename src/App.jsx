@@ -102,6 +102,11 @@ const AboutJainSanghPage = lazy(() =>
     default: module.AboutJainSangh,
   })),
 );
+const AboutShirdiSaiSatsangPage = lazy(() =>
+  import("./pages/About/AboutShirdiSaiSatsang").then((module) => ({
+    default: module.AboutShirdiSaiSatsang,
+  })),
+);
 // 5. Modern Data Router Configuration
 const router = createBrowserRouter([
   {
@@ -203,6 +208,18 @@ const router = createBrowserRouter([
             }
           >
             <AboutJainSanghPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "shirdi-sai-satsang",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutShirdiSaiSatsangPage />
           </Suspense>
         ),
       },
