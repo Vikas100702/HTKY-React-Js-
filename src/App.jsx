@@ -67,14 +67,9 @@ const NotFoundFallback = () => (
 
 // 4. Lazy Loaded Pages (Bundle Splitting)
 const HomePage = lazy(() => import("./pages/Home"));
-const AboutPriestPage = lazy(() =>
-  import("./pages/About/AboutPriest").then((module) => ({
-    default: module.AboutPriest,
-  })),
-);
-const AboutDeityPage = lazy(() =>
-  import("./pages/About/AboutDeity").then((module) => ({
-    default: module.AboutDeity,
+const AllClassesPage = lazy(() =>
+  import("./pages/Education/AllClasses").then((module) => ({
+    default: module.AllClasses
   })),
 );
 const AboutTemplePage = lazy(() =>
@@ -82,14 +77,24 @@ const AboutTemplePage = lazy(() =>
     default: module.AboutTemple,
   })),
 );
-const AboutBoardCommitteePage = lazy(() =>
-  import("./pages/About/AboutBoardCommittee").then((module) => ({
-    default: module.AboutBoardCommittee,
+const AboutDeityPage = lazy(() =>
+  import("./pages/About/AboutDeity").then((module) => ({
+    default: module.AboutDeity,
+  })),
+);
+const AboutPriestPage = lazy(() =>
+  import("./pages/About/AboutPriest").then((module) => ({
+    default: module.AboutPriest,
   })),
 );
 const AboutLandDonorsPage = lazy(() =>
   import("./pages/About/AboutLandDonors").then((module) => ({
     default: module.AboutLandDonors,
+  })),
+);
+const AboutBoardCommitteePage = lazy(() =>
+  import("./pages/About/AboutBoardCommittee").then((module) => ({
+    default: module.AboutBoardCommittee,
   })),
 );
 const AboutEtiquetteVisitPage = lazy(() =>
@@ -128,26 +133,14 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "about-priests",
+        path: "all-classes",
         element: (
           <Suspense
             fallback={
               <div className="p-8 text-center animate-pulse">Loading...</div>
             }
           >
-            <AboutPriestPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "about-deities",
-        element: (
-          <Suspense
-            fallback={
-              <div className="p-8 text-center animate-pulse">Loading...</div>
-            }
-          >
-            <AboutDeityPage />
+            <AllClassesPage />
           </Suspense>
         ),
       },
@@ -164,14 +157,26 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "board-committee-members",
+        path: "about-deities",
         element: (
           <Suspense
             fallback={
               <div className="p-8 text-center animate-pulse">Loading...</div>
             }
           >
-            <AboutBoardCommitteePage />
+            <AboutDeityPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "about-priests",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutPriestPage />
           </Suspense>
         ),
       },
@@ -184,6 +189,18 @@ const router = createBrowserRouter([
             }
           >
             <AboutLandDonorsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "board-committee-members",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <AboutBoardCommitteePage />
           </Suspense>
         ),
       },
