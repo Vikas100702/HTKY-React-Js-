@@ -67,16 +67,42 @@ const NotFoundFallback = () => (
 
 // 4. Lazy Loaded Pages (Bundle Splitting)
 const HomePage = lazy(() => import("./pages/Home"));
+
+// FOOTER
 const ContactUsPage = lazy(() =>
   import("./components/layout/Footer/ContactUs").then((module) => ({
     default: module.ContactUs,
   })),
 );
+const CopyrightPage = lazy(() =>
+  import("./components/layout/Footer/Copyright").then((module) => ({
+    default: module.Copyright,
+  })),
+);
+const TermsOfUsePage = lazy(() =>
+  import("./components/layout/Footer/TermsOfUse").then((module) => ({
+    default: module.TermsOfUse,
+  })),
+);
+const PrivacyPolicyPage = lazy(() =>
+  import("./components/layout/Footer/PrivacyPolicy").then((module) => ({
+    default: module.PrivacyPolicy,
+  })),
+);
+const SecurityPage = lazy(() =>
+  import("./components/layout/Footer/Security").then((module) => ({
+    default: module.Security,
+  })),
+);
+
+// EDUCATION
 const AllClassesPage = lazy(() =>
   import("./pages/Education/AllClasses").then((module) => ({
     default: module.AllClasses,
   })),
 );
+
+// SEVA
 const SeniorProgramPage = lazy(() =>
   import("./pages/Seva/SeniorProgram").then((module) => ({
     default: module.SeniorProgram,
@@ -92,6 +118,8 @@ const LostFoundPage = lazy(() =>
     default: module.LostFound,
   })),
 );
+
+// ABOUT TEMPLE
 const AboutTemplePage = lazy(() =>
   import("./pages/About/AboutTemple").then((module) => ({
     default: module.AboutTemple,
@@ -132,6 +160,7 @@ const AboutShirdiSaiSatsangPage = lazy(() =>
     default: module.AboutShirdiSaiSatsang,
   })),
 );
+
 // 5. Modern Data Router Configuration
 const router = createBrowserRouter([
   {
@@ -139,6 +168,7 @@ const router = createBrowserRouter([
     element: <MainLayout />,
     errorElement: <GlobalErrorFallback />, // Ultimate crash protection here
     children: [
+      // HOME PAGE
       {
         index: true,
         // Suspense wraps lazy loaded components
@@ -152,6 +182,8 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      // FOOTER
       {
         path: "contact-us",
         element: (
@@ -165,6 +197,56 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "copyright",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <CopyrightPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "terms-of-use",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <TermsOfUsePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "privacy-policy",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <PrivacyPolicyPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "security",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <SecurityPage />
+          </Suspense>
+        ),
+      },
+
+      // EDUCATION
+      {
         path: "all-classes",
         element: (
           <Suspense
@@ -176,6 +258,8 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      //SEVA
       {
         path: "senior-program",
         element: (
@@ -212,6 +296,8 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      // ABOUT TEMPLE
       {
         path: "about-temple",
         element: (
@@ -308,6 +394,8 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      // NOT FOUND
       {
         path: "*",
         element: <NotFoundFallback />,
