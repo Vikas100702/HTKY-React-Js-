@@ -32,7 +32,8 @@ export const APP_STRINGS = Object.freeze({
     weekendTimingsLabel: "Weekend Timings:",
 
     // --- Footer Legal Links ---
-    termsConditions: "Terms & Conditions",
+    copyright: "Copyright",
+    termsConditions: "Terms of Use",
     privacyPolicy: "Privacy Policy",
-    securityPolicy: "Security Policy",
+    security: "Security",
 });
