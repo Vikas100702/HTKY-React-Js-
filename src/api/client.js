@@ -5,7 +5,7 @@
  */
 
 import axios from 'axios';
-import { BASE_URL } from '../constants/apiConstants';
+import { BASE_URL, PRE_BASE_URL } from '../constants/apiConstants';
 
 /**
  * Enterprise Axios Instance Config
@@ -26,6 +26,9 @@ export const apiClient = axios.create({
  */
 apiClient.interceptors.request.use(
     (config) => {
+        if(config.pre) {
+            config.baseURL = PRE_BASE_URL
+        }
         // Future proofing: Inject auth tokens here for Devotee Portal later
         return config;
     },
