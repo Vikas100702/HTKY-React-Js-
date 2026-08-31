@@ -294,14 +294,14 @@ export const Footer = () => {
                 {APP_STRINGS.copyright}
               </NavLink>
               <NavLink
-                to="/termsOfUse"
+                to="/terms-of-use"
                 className="hover:opacity-75 hover:underline inline-block w-fit"
                 style={{ color: APP_COLORS.primary }}
               >
                 {APP_STRINGS.termsConditions}
               </NavLink>
               <NavLink
-                to="/privacy"
+                to="/privacy-policy"
                 className="hover:opacity-75 hover:underline inline-block w-fit"
                 style={{ color: APP_COLORS.primary }}
               >
@@ -386,7 +386,7 @@ export const Footer = () => {
           className="text-xs md:text-sm tracking-widest uppercase font-bold"
           style={{ color: APP_COLORS.textInverse }}
         >
-          {footerData.copyrightText}
+          Copyright &copy; VAAP Technologies Inc, All rights reserved.
         </p>
       </div>
     </footer>
