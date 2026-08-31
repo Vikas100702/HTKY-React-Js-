@@ -24,14 +24,11 @@ const getSecureEnvVar = (key) => {
 };
 
 export const ENV_CONFIG = Object.freeze({
-    // Base API Endpoint
+    VITE_RECAPTCHA_SITE_KEY: getSecureEnvVar("VITE_RECAPTCHA_SITE_KEY"),
     BASE_URL: getSecureEnvVar("VITE_API_BASE_URL"),
-
-    // Enterprise Identifiers
+    PRE_BASE_URL: getSecureEnvVar("VITE_API_PRE_BASE_URL"),
     PRODUCT_ID: getSecureEnvVar("VITE_PRODUCT_ID"),
     CLIENT_ID: getSecureEnvVar("VITE_CLIENT_ID"),
-
-    // Event Specific Identifiers
     PARAYANAM_EVENT_ID: getSecureEnvVar("VITE_PARAYANAM_EVENT_ID"),
     PARAYANAM_MEMBER_ID: getSecureEnvVar("VITE_PARAYANAM_MEMBER_ID"),
 });
