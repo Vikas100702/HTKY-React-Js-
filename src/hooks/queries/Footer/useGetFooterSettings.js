@@ -47,7 +47,10 @@ export const adaptFooterData = (rawData) => {
             twitterLink: footerItem?.twitterLink || "",
             youtubeLink: footerItem?.youtubeLink || "",
             instagramLink: footerItem?.instagramLink || "",
-            copyrightText: footerItem?.footerCopyRight || footerItem?.["footerCopyRight  "] || "Copyright © 2026. Sree Devi Peetham. All Rights Reserved. 901"
+            copyright: footerItem?.copyRight || "",
+            termsOfUse: footerItem?.termsOfUse || "",
+            privacyPolicy: footerItem?.privacyPolicy || "",
+            security: footerItem?.securityPage || ""
         };
     } catch (error) {
         console.error('[Adapter Error] Failed to map Footer Data:', error);
