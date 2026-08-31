@@ -5,15 +5,16 @@
  * Built exactly on the provided structural pattern without unnecessary UI changes.
  */
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   useGetFooterSettings,
   useGetBackgroundMusic,
-} from "../../hooks/queries/useGetFooterSettings";
-import { APP_COLORS } from "../../constants/appColors";
-import { APP_STRINGS } from "../../constants/appStrings";
+} from "../../../hooks/queries/Footer/useGetFooterSettings";
+import { APP_COLORS } from "../../../constants/appColors";
+import { APP_STRINGS } from "../../../constants/appStrings";
 
 export const Footer = () => {
+  const navigate = useNavigate();
   const { data: footerData, isLoading } = useGetFooterSettings();
   const { data: musicData } = useGetBackgroundMusic();
 
@@ -72,13 +73,11 @@ export const Footer = () => {
         {/* 5-Column Grid with updated responsive alignment */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 md:gap-8 items-start">
           {/* Column 1: Logo & Audio Player */}
-          {/* FIX: Changed alignment to center strictly on mobile/tablet (lg:items-start lg:text-left) */}
           <div className="space-y-4 flex flex-col items-center lg:items-center   text-center lg:text-left w-full">
             {footerData.logoUrl && (
               <img
                 src={footerData.logoUrl}
                 alt="Sree Devi Peetham Logo"
-                // FIX: Significantly increased logo height to fill empty space
                 className="h-32 md:h-40 lg:h-44 w-auto object-contain my-2 drop-shadow-sm"
                 loading="lazy"
               />
@@ -288,7 +287,14 @@ export const Footer = () => {
             </h3>
             <div className="pt-1 flex flex-col space-y-1.5 text-base font-bold text-gray-900 w-full items-center lg:items-start">
               <NavLink
-                to="/terms"
+                to="/copyright"
+                className="hover:opacity-75 hover:underline inline-block w-fit"
+                style={{ color: APP_COLORS.primary }}
+              >
+                {APP_STRINGS.copyright}
+              </NavLink>
+              <NavLink
+                to="/termsOfUse"
                 className="hover:opacity-75 hover:underline inline-block w-fit"
                 style={{ color: APP_COLORS.primary }}
               >
@@ -306,7 +312,7 @@ export const Footer = () => {
                 className="hover:opacity-75 hover:underline inline-block w-fit"
                 style={{ color: APP_COLORS.primary }}
               >
-                {APP_STRINGS.securityPolicy}
+                {APP_STRINGS.security}
               </NavLink>
             </div>
           </div>
@@ -359,6 +365,10 @@ export const Footer = () => {
               <button
                 className="px-6 py-2 rounded text-sm font-bold uppercase tracking-wider text-white shadow-md hover:opacity-90 transition-opacity mt-1 mb-2"
                 style={{ backgroundColor: APP_COLORS.primary }}
+                onClick={() => {
+                  navigate("/contact-us");
+                  window.scrollTo({ top: 0, behavior: "smooth" }); // Smooth scroll to top of new page
+                }}
               >
                 Contact Us
               </button>
