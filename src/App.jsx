@@ -67,6 +67,11 @@ const NotFoundFallback = () => (
 
 // 4. Lazy Loaded Pages (Bundle Splitting)
 const HomePage = lazy(() => import("./pages/Home"));
+const ContactUsPage = lazy(() =>
+  import("./components/layout/Footer/ContactUs").then((module) => ({
+    default: module.ContactUs,
+  })),
+);
 const AllClassesPage = lazy(() =>
   import("./pages/Education/AllClasses").then((module) => ({
     default: module.AllClasses,
@@ -144,6 +149,18 @@ const router = createBrowserRouter([
             }
           >
             <HomePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "contact-us",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <ContactUsPage />
           </Suspense>
         ),
       },
