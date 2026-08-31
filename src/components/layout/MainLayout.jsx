@@ -8,7 +8,7 @@ import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import { Header } from "./Header";
 import { Navbar } from "./Navbar";
-import { Footer } from "./Footer";
+import { Footer } from "./Footer/Footer";
 import { APP_COLORS } from "../../constants/appColors";
 import { APP_STRINGS } from "../../constants/appStrings";
 import { APP_FONTS } from "../../constants/appTheme";
