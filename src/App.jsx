@@ -103,6 +103,11 @@ const AllClassesPage = lazy(() =>
 );
 
 // SEVA
+const VolunteerSignUpPage = lazy(() =>
+  import("./pages/Seva/VolunteerSignUp").then((module) => ({
+    default: module.VolunteerSignUp,
+  })),
+);
 const SeniorProgramPage = lazy(() =>
   import("./pages/Seva/SeniorProgram").then((module) => ({
     default: module.SeniorProgram,
@@ -260,6 +265,18 @@ const router = createBrowserRouter([
       },
 
       //SEVA
+      {
+        path: "volunteer-signup",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <VolunteerSignUpPage />
+          </Suspense>
+        ),
+      },
       {
         path: "senior-program",
         element: (
