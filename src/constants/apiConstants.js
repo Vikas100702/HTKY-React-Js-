@@ -15,5 +15,7 @@ export const ENDPOINTS = Object.freeze({
     FILTER_API: 'api/appgen/filterAPI',
     EVENT_PARTICIPATE_LIST_API: 'api/puja/getParticipateEventList',
     GET_CALENDAR_API: 'api/home/getCalendar',
-    SUBMIT_FORM_DATA_API: 'api/emailSend/sendContactEmail'
+    SUBMIT_FORM_DATA_API: 'api/emailSend/sendContactEmail',
+    VOLUNTEER_UPLOAD_PHOTO_API: 'api/upload/docsmany',
+    VOLUNTEER_SIGNUP_API: 'api/volunteer/addVolunteer',
 })
