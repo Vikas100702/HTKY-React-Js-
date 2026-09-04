@@ -437,7 +437,9 @@ export const VolunteerSignUp = () => {
       ...formData,
       name: `${formData.firstName} ${formData.lastName}`.trim(),
       // Map the parsed image filename to 'base64' key as requested
-      base64: uploadedFileMeta?.extractedFilename || "",
+      base64: uploadedFileMeta?.extractedFileName
+        ? `uploads/others/${uploadedFileMeta.extractedFileName}`
+        : "",
       volunteerArea: JSON.stringify(formData.volunteerArea),
     };
 
