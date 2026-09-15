@@ -95,6 +95,13 @@ const SecurityPage = lazy(() =>
   })),
 );
 
+// DONATIONS
+const GeneralDonationPage = lazy(() =>
+  import("./pages/Donations/GeneralDonation").then((module) => ({
+    default: module.GeneralDonation,
+  })),
+);
+
 // EDUCATION
 const AllClassesPage = lazy(() =>
   import("./pages/Education/AllClasses").then((module) => ({
@@ -246,6 +253,20 @@ const router = createBrowserRouter([
             }
           >
             <SecurityPage />
+          </Suspense>
+        ),
+      },
+
+      // DONATION
+      {
+        path: "general-donation",
+        element: (
+          <Suspense
+            fallback={
+              <div className="p-8 text-center animate-pulse">Loading...</div>
+            }
+          >
+            <GeneralDonationPage />
           </Suspense>
         ),
       },
