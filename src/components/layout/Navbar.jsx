@@ -1,8 +1,8 @@
 /**
  * @file src/components/layout/Navbar.jsx
- * @description Dynamic Navigation Bar component driven by the useGetNavMenu hook.
- * Fully resolves the React Router mass-highlight collision by neutralizing dummy '/' paths.
- * Refactored strictly to shift hardcoded hex values to centralized constants without altering UI/Logic.
+ * @description Dynamic Navigation Bar component driven by the useGetNavMenu hook
+ * and synchronized reactively with the global Zustand cart store (useCartStore).
+ * Resolves path collisions for General Donation routes and connects interactive cart triggers.
  */
 
 import { useState } from "react";
@@ -11,11 +11,46 @@ import { useGetNavMenu } from "../../hooks/queries/useGetNavMenu";
 import { APP_COLORS } from "../../constants/appColors";
 import { APP_FONTS } from "../../constants/appTheme";
 import { ShoppingCart } from "lucide-react";
+import { useCartStore } from "../../store/useCartStore";
+
+/**
+ * Resolves canonical route destinations for dynamic menu items.
+ * Neutralizes dead-hash '#' collisions for unconfigured backend items.
+ *
+ * @param {Object} item - Menu item configuration from Master Data
+ * @returns {string} Sanitized destination URL path
+ */
+const resolveSafePath = (item) => {
+  if (!item) return "/";
+
+  const title = (item.title || "").trim().toUpperCase();
+
+  // Canonical fallback mappings for Donation sub-items
+  if (title === "GENERAL DONATION" || title === "GENERAL DONATIONS") {
+    return item.path && item.path !== "/" ? item.path : "/donations/general";
+  }
+  if (title === "RECURRING DONATION" || title === "RECURRING DONATIONS") {
+    return item.path && item.path !== "/" ? item.path : "/donations/recurring";
+  }
+
+  const isHome = title === "HOME";
+  const rawPath = item.path || "/";
+
+  if (rawPath === "/" && !isHome) {
+    return `#${item.id || item._id || "menu"}`;
+  }
+
+  return rawPath;
+};
 
 export const Navbar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
+  // Reactive Cart Badge Subscription (Atomic Selector)
+  const totalCartCount = useCartStore((state) => state.totalCount);
+
+  // Dynamic Menu Query
   const { data: navItems, isLoading } = useGetNavMenu();
 
   const toggleMobileDropdown = (id) => {
@@ -57,7 +92,7 @@ export const Navbar = () => {
           <div className="flex items-center md:hidden w-full justify-between">
             <button
               onClick={() => setIsMobileOpen((prev) => !prev)}
-              className="p-1.5 rounded-md hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors"
+              className="p-1.5 rounded-md hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors cursor-pointer"
               style={{ color: APP_COLORS.textInverse }}
               aria-label="Toggle Navigation Menu"
             >
@@ -92,10 +127,7 @@ export const Navbar = () => {
               const hasSubMenu =
                 Array.isArray(item?.subMenu) && item.subMenu.length > 0;
 
-              const isHome = item.title.toUpperCase() === "HOME";
-              const rawPath = item.path || "/";
-              const safePath =
-                rawPath === "/" && !isHome ? `#${item.id}` : rawPath;
+              const safePath = resolveSafePath(item);
 
               return (
                 <div key={item.id} className="relative group">
@@ -104,7 +136,7 @@ export const Navbar = () => {
                     end
                     className="px-3 py-3 transition-opacity duration-200 flex items-center space-x-1 uppercase tracking-wider hover:opacity-80"
                     style={({ isActive }) => {
-                      const active = isActive && safePath !== `#${item.id}`;
+                      const active = isActive && !safePath.startsWith("#");
                       return {
                         color: active
                           ? APP_COLORS.secondary
@@ -145,9 +177,7 @@ export const Navbar = () => {
                       }}
                     >
                       {item.subMenu.map((sub) => {
-                        const rawSubPath = sub.path || "/";
-                        const safeSubPath =
-                          rawSubPath === "/" ? `#${sub.id}` : rawSubPath;
+                        const safeSubPath = resolveSafePath(sub);
 
                         return (
                           <NavLink
@@ -157,7 +187,7 @@ export const Navbar = () => {
                             className="block px-4 py-2.5 text-xs transition-colors uppercase tracking-wider hover:bg-black/20"
                             style={({ isActive }) => {
                               const active =
-                                isActive && safeSubPath !== `#${sub.id}`;
+                                isActive && !safeSubPath.startsWith("#");
                               return {
                                 color: active
                                   ? APP_COLORS.secondary
@@ -178,14 +208,22 @@ export const Navbar = () => {
                 </div>
               );
             })}
-            {/* 2. ADDED CART UI - DESKTOP VIEW */}
-            <div className="flex items-center ml-2 lg:ml-6 pl-2 lg:pl-4 border-l border-white/30 cursor-pointer hover:opacity-80 transition-opacity">
+
+            {/* Desktop Cart Action Trigger with Reactive Zustand Count */}
+            <NavLink
+              to="/donations/general"
+              className="flex items-center ml-2 lg:ml-6 pl-2 lg:pl-4 border-l border-white/30 cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ color: APP_COLORS.textInverse }}
+              aria-label={`Donation Cart containing ${totalCartCount} items`}
+            >
               <ShoppingCart
                 className="w-5 h-5 lg:w-6 lg:h-6"
                 strokeWidth={2.5}
               />
-              <span className="ml-1.5 text-lg lg:text-xl font-bold">0</span>
-            </div>
+              <span className="ml-1.5 text-lg lg:text-xl font-bold">
+                {totalCartCount}
+              </span>
+            </NavLink>
           </div>
         </div>
       </div>
@@ -203,11 +241,7 @@ export const Navbar = () => {
             const hasSubMenu =
               Array.isArray(item?.subMenu) && item.subMenu.length > 0;
             const isSubMenuOpen = openDropdownId === item.id;
-
-            const isHome = item.title.toUpperCase() === "HOME";
-            const rawPath = item.path || "/";
-            const safePath =
-              rawPath === "/" && !isHome ? `#${item.id}` : rawPath;
+            const safePath = resolveSafePath(item);
 
             return (
               <div
@@ -221,7 +255,7 @@ export const Navbar = () => {
                     onClick={() => setIsMobileOpen(false)}
                     className="text-xs uppercase tracking-wider transition-opacity hover:opacity-80"
                     style={({ isActive }) => {
-                      const active = isActive && safePath !== `#${item.id}`;
+                      const active = isActive && !safePath.startsWith("#");
                       return {
                         color: active
                           ? APP_COLORS.secondary
@@ -236,8 +270,9 @@ export const Navbar = () => {
                   {hasSubMenu && (
                     <button
                       onClick={() => toggleMobileDropdown(item.id)}
-                      className="p-1 focus:outline-none transition-transform hover:scale-110"
+                      className="p-1 focus:outline-none transition-transform hover:scale-110 cursor-pointer"
                       style={{ color: APP_COLORS.secondary }}
+                      aria-label={`Toggle ${item.title} submenu`}
                     >
                       <svg
                         className={`w-4 h-4 transform transition-transform duration-200 ${
@@ -262,9 +297,7 @@ export const Navbar = () => {
                 {hasSubMenu && isSubMenuOpen && (
                   <div className="pl-4 pb-2 space-y-1 bg-black/20 rounded my-1">
                     {item.subMenu.map((sub) => {
-                      const rawSubPath = sub.path || "/";
-                      const safeSubPath =
-                        rawSubPath === "/" ? `#${sub.id}` : rawSubPath;
+                      const safeSubPath = resolveSafePath(sub);
 
                       return (
                         <NavLink
@@ -275,7 +308,7 @@ export const Navbar = () => {
                           className="block py-1.5 text-[11px] uppercase tracking-wider transition-opacity hover:opacity-80"
                           style={({ isActive }) => {
                             const active =
-                              isActive && safeSubPath !== `#${sub.id}`;
+                              isActive && !safeSubPath.startsWith("#");
                             return {
                               color: active
                                 ? APP_COLORS.secondary
@@ -293,8 +326,14 @@ export const Navbar = () => {
               </div>
             );
           })}
-          {/* 3. ADDED CART UI - MOBILE VIEW */}
-          <div className="flex items-center justify-between py-2 cursor-pointer hover:opacity-80">
+
+          {/* Mobile Cart Action Trigger */}
+          <NavLink
+            to="/donations/general"
+            onClick={() => setIsMobileOpen(false)}
+            className="flex items-center justify-between py-2 cursor-pointer hover:opacity-80 border-t border-white/10 mt-2"
+            aria-label={`Donation Cart containing ${totalCartCount} items`}
+          >
             <div className="flex items-center space-x-2">
               <ShoppingCart
                 className="w-5 h-5"
@@ -312,9 +351,9 @@ export const Navbar = () => {
               className="font-bold text-lg"
               style={{ color: APP_COLORS.textInverse }}
             >
-              0
+              {totalCartCount}
             </span>
-          </div>
+          </NavLink>
         </div>
       )}
     </nav>
