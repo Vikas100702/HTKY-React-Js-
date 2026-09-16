@@ -73,7 +73,7 @@ export const GeneralDonation = () => {
   } = helpers;
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] pb-32">
+    <section className="w-full bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-fill bg-top">
       {/* Header */}
       <section className="relative text-white py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
@@ -539,7 +539,7 @@ export const GeneralDonation = () => {
         getRemainingSlots={getRemainingSlots}
         primaryColor = {APP_COLORS.primary}
       />
-    </div>
+    </section>
   );
 };
 
