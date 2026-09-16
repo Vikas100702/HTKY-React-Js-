@@ -462,7 +462,6 @@ import { lazy, Suspense } from "react";
 import {
   createBrowserRouter,
   RouterProvider,
-  Navigate,
   useRouteError,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -721,14 +720,6 @@ const router = createBrowserRouter([
             <GeneralDonationPage />
           </Suspense>
         ),
-      },
-      {
-        path: "donations",
-        element: <Navigate to="/donations/general" replace />,
-      },
-      {
-        path: "general-donation",
-        element: <Navigate to="/donations/general" replace />,
       },
 
       // FOOTER
