@@ -1,9 +1,26 @@
+/**
+ * @file src/pages/Donation/hooks/useGeneralDonation.js
+ * @description Enterprise Logic Controller Hook for HTKY General Donation Module.
+ * Synchronizes local selections directly with Zustand global cart store (useCartStore),
+ * enforces dynamic Lunar Tithi engine, holding dates exclusion, and modal stacking locks.
+ */
+
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useCartStore } from '../../../store/useCartStore';
 import {
     useGetDonationCategories,
     useGetDonationCategoryDetails,
-    parseDateString
+    useGetTithiDates,
+    extractTithiKeyword,
+    parseDateString,
+    useGetClientSettings,
+    useGetServiceAvailability,
+    formatDateToMMDDYYYY,
 } from '../../../hooks/queries/Donations/useGetDonations';
+
+// ============================================================================
+// CONSTANTS & RECURRENCE MAPS
+// ============================================================================
 
 const WEEKDAY_MAP = Object.freeze({
     SUNDAY: 0,
@@ -24,6 +41,10 @@ const ORDINAL_MAP = Object.freeze({
     SIXTH: 6
 });
 
+// ============================================================================
+// TELEMETRY & OBSERVABILITY
+// ============================================================================
+
 const logControllerTelemetry = (level, message, context = {}) => {
     const event = {
         timestamp: new Date().toISOString(),
@@ -43,14 +64,29 @@ const logControllerTelemetry = (level, message, context = {}) => {
 };
 
 // ============================================================================
-// LOGIC CONTROLLER HOOK
+// CONTROLLER HOOK
 // ============================================================================
 
 export const useGeneralDonation = () => {
     const isMountedRef = useRef(true);
 
     // --------------------------------------------------------------------------
-    // 1. SERVER STATE QUERIES
+    // 1. GLOBAL ZUSTAND STORE SUBSCRIPTION
+    // --------------------------------------------------------------------------
+    const cartItems = useCartStore((state) => state.items);
+    const totalCartCount = useCartStore((state) => state.totalCount);
+    const totalCartAmount = useCartStore((state) => state.totalAmount);
+    const currencySymbol = useCartStore((state) => state.currencySymbol);
+
+    const setCurrencySymbol = useCartStore((state) => state.setCurrencySymbol);
+    const addItemToGlobalCart = useCartStore((state) => state.addItem);
+    const removeItemFromGlobalCart = useCartStore((state) => state.removeItem);
+    const updateGlobalQuantity = useCartStore((state) => state.updateQuantity);
+    const acquireModalLock = useCartStore((state) => state.acquireModalLock);
+    const releaseModalLock = useCartStore((state) => state.releaseModalLock);
+
+    // --------------------------------------------------------------------------
+    // 2. SERVER STATE QUERIES
     // --------------------------------------------------------------------------
     const {
         data: categories = [],
@@ -58,17 +94,18 @@ export const useGeneralDonation = () => {
         isError: isCategoriesError
     } = useGetDonationCategories();
 
-    // User tab selection tracking
     const [userSelectedCategory, setUserSelectedCategory] = useState(null);
+    const [activeTithi, setActiveTithi] = useState(null);
 
-    // Derived Category: Picks manual user selection, falls back to 'GENERAL DONATIONS', or takes first entry
+    // Default Category Fallback ('HANUMAN' -> 'GENERAL DONATIONS' -> categories[0])
     const selectedCategory = useMemo(() => {
         if (userSelectedCategory) return userSelectedCategory;
         if (categories.length > 0) {
-            const defaultCategory =
+            const defaultCat =
+                categories.find((cat) => cat.refDataName?.toUpperCase() === 'HANUMAN') ||
                 categories.find((cat) => cat.refDataName?.toUpperCase() === 'GENERAL DONATIONS') ||
                 categories[0];
-            return defaultCategory?.refDataName || '';
+            return defaultCat?.refDataName || '';
         }
         return '';
     }, [categories, userSelectedCategory]);
@@ -79,25 +116,50 @@ export const useGeneralDonation = () => {
         isError: isDetailsError
     } = useGetDonationCategoryDetails(selectedCategory);
 
+    // 90-Days Lunar Tithi dynamic query
+    const {
+        data: tithiDates = [],
+        isLoading: isTithiLoading
+    } = useGetTithiDates(activeTithi);
+
+    // 1. Dynamic Client Settings Query (Settings API)
+    const { data: clientSettings } = useGetClientSettings();
+
+    // Settings API se aane wale currency symbol ko Zustand cart store me sync karein
+    useEffect(() => {
+        if (clientSettings?.currencySymbol) {
+            setCurrencySymbol(clientSettings.currencySymbol);
+        }
+    }, [clientSettings?.currencySymbol, setCurrencySymbol]);
+
+    // 2. Dynamic Service Availability Query (Availability API)
+    // Check: Sirf tabhi query fire hogi jab modal khula ho aur item me bookingLimitPerDay > 0 ho
+    // const isCustomSlotActive = Boolean(
+    //     dateModal.isOpen && checkBookingLimitPerDay(dateModal.item?.bookingLimitPerDay)
+    // );
+
+    // const { data: availabilityMap = {} } = useGetServiceAvailability(
+    //     dateModal.item?.refDataName,
+    //     dateModal.item?.serviceTypes || selectedCategory,
+    //     isCustomSlotActive
+    // );
+
     // --------------------------------------------------------------------------
-    // 2. LOCAL INTERACTIVE STATE
+    // 3. LOCAL INTERACTIVE STATE (UI Modifiers & Validation)
     // --------------------------------------------------------------------------
     const [searchQuery, setSearchQuery] = useState('');
-    const [checkedCategoryMap, setCheckedCategoryMap] = useState({});
-    const [categoryQuantitiesMap, setCategoryQuantitiesMap] = useState({});
     const [customAmountMap, setCustomAmountMap] = useState({});
     const [selectedDatesMap, setSelectedDatesMap] = useState({});
     const [selectedTimeMap, setSelectedTimeMap] = useState({});
     const [expandedDescMap, setExpandedDescMap] = useState({});
     const [warningMessage, setWarningMessage] = useState('');
-    const [currencySymbol] = useState('$');
 
-    // Modal Dialog Descriptors with Mutex Stacking Lock
+    // Modal dialog descriptors
     const [dateModal, setDateModal] = useState({
         isOpen: false,
         item: null,
         isCustomSlot: false,
-        availableDates: []
+        tithiKeyword: null
     });
 
     const [timeModal, setTimeModal] = useState({
@@ -105,16 +167,46 @@ export const useGeneralDonation = () => {
         item: null
     });
 
-    // Memory safety lifecycle audit
+    const isCustomSlotActive = Boolean(
+        dateModal?.isOpen &&
+        dateModal?.item &&
+        checkBookingLimitPerDay(dateModal.item?.bookingLimitPerDay)
+    );
+
+    const { data: availabilityMap = {} } = useGetServiceAvailability(
+        dateModal?.item?.refDataName || '',
+        dateModal?.item?.serviceTypes || selectedCategory || '',
+        isCustomSlotActive
+    );  
+
     useEffect(() => {
         isMountedRef.current = true;
         return () => {
             isMountedRef.current = false;
+            releaseModalLock('DONATION_DATE_MODAL');
+            releaseModalLock('DONATION_TIME_MODAL');
         };
-    }, []);
+    }, [releaseModalLock]);
+
+    // Derive checked state and quantities reactively from global cart store
+    const checkedCategoryMap = useMemo(() => {
+        const map = {};
+        cartItems.forEach((item) => {
+            map[item.id] = true;
+        });
+        return map;
+    }, [cartItems]);
+
+    const categoryQuantitiesMap = useMemo(() => {
+        const map = {};
+        cartItems.forEach((item) => {
+            map[item.id] = item.quantity || 1;
+        });
+        return map;
+    }, [cartItems]);
 
     // --------------------------------------------------------------------------
-    // 3. SEARCH & REAL-TIME FILTERING
+    // 4. SEARCH FILTERING
     // --------------------------------------------------------------------------
     const filteredCategoryDetails = useMemo(() => {
         try {
@@ -133,12 +225,9 @@ export const useGeneralDonation = () => {
     }, [categoryDetails, searchQuery]);
 
     // --------------------------------------------------------------------------
-    // 4. BUSINESS RULE HELPERS & VALIDATORS
+    // 5. BUSINESS RULE HELPERS & VALIDATORS
     // --------------------------------------------------------------------------
 
-    /**
-     * Evaluates if current time falls within item's active operating window.
-     */
     const isWithinTimeRange = useCallback((startStr, endStr) => {
         if (!startStr || !endStr || !startStr.trim() || !endStr.trim()) return true;
         try {
@@ -166,9 +255,6 @@ export const useGeneralDonation = () => {
         }
     }, []);
 
-    /**
-     * Checks whether card should be disabled/greyscaled.
-     */
     const isCategoryGreyScale = useCallback(
         (item) => {
             try {
@@ -204,13 +290,10 @@ export const useGeneralDonation = () => {
     }, []);
 
     // --------------------------------------------------------------------------
-    // 5. RECURRING DATE & OCCURRENCE ENGINE
+    // 6. DATE & TITHI CALCULATION ENGINE
     // --------------------------------------------------------------------------
 
-    /**
-     * Generates valid recurring calendar dates based on day types and holding rules.
-     */
-    const calculateAvailableDates = useCallback(({ dayTypes, startDate, endDate, holdingDates }) => {
+    const calculateGregorianDates = useCallback(({ dayTypes, startDate, endDate, holdingDates }) => {
         try {
             const upperDayTypes = (dayTypes || '').toUpperCase().trim();
             let allowedWeekdays = [];
@@ -284,7 +367,19 @@ export const useGeneralDonation = () => {
                         : true;
 
                     if (passesOrdinal && !holdingDatesSet.has(current.toDateString())) {
-                        availableDates.push(new Date(current));
+                        const limit = parseInt(dateModal?.item?.bookingLimitPerDay, 10) || 0;
+
+                        // Flutter Check: Agar limit > 0 hai, bookedCount ghata kar verify karein
+                        if (limit > 0) {
+                            const dateKey = formatDateToMMDDYYYY(current); // "MM/dd/yyyy" format
+                            const bookedCount = availabilityMap[dateKey] || 0;
+                            const remainingSlots = limit - bookedCount;
+                            if (remainingSlots > 0) {
+                                availableDates.push(new Date(current));
+                            }
+                        } else {
+                            availableDates.push(new Date(current));
+                        }
                     }
                 }
                 current.setDate(current.getDate() + 1);
@@ -292,14 +387,36 @@ export const useGeneralDonation = () => {
 
             return availableDates;
         } catch (error) {
-            logControllerTelemetry('error', 'Date recurrence calculation error', { error: error.message });
+            logControllerTelemetry('error', 'Gregorian date calculation error', { error: error.message });
             return [];
         }
     }, []);
 
-    /**
-     * Slices multiple occurrences from the starting picked date.
-     */
+    const modalAvailableDates = useMemo(() => {
+        if (!dateModal.isOpen || !dateModal.item) return [];
+
+        const holdingDatesSet = new Set();
+        if (dateModal.item.holdingDates && typeof dateModal.item.holdingDates === 'string') {
+            dateModal.item.holdingDates.split(',').forEach((dStr) => {
+                const parsed = parseDateString(dStr.trim());
+                if (parsed) holdingDatesSet.add(parsed.toDateString());
+            });
+        }
+
+        if (dateModal.tithiKeyword) {
+            return tithiDates
+                .map((tItem) => tItem.date)
+                .filter((d) => d instanceof Date && !holdingDatesSet.has(d.toDateString()));
+        }
+
+        return calculateGregorianDates({
+            dayTypes: dateModal.item.dayTypes,
+            startDate: dateModal.item.startDate,
+            endDate: dateModal.item.endDate,
+            holdingDates: dateModal.item.holdingDates
+        });
+    }, [dateModal.isOpen, dateModal.item, dateModal.tithiKeyword, tithiDates, calculateGregorianDates]);
+
     const getSelectedOccurrences = useCallback((userSelectedDate, occurrencesNo, allDates) => {
         const occurrences = Math.max(parseInt(occurrencesNo, 10) || 1, 1);
         if (occurrences <= 1) return [userSelectedDate];
@@ -312,39 +429,18 @@ export const useGeneralDonation = () => {
         return allDates.slice(startIndex, startIndex + occurrences);
     }, []);
 
-    const getRemainingSlots = useCallback((_date, bookingLimitPerDay) => {
+    const getRemainingSlots = useCallback((date, bookingLimitPerDay) => {
         const limit = parseInt(bookingLimitPerDay, 10) || 0;
-        return limit <= 0 ? 9999 : limit;
-    }, []);
+        if (limit <= 0) return 9999;
+
+        // Flutter Logic: limit - bookedCount
+        const dateKey = formatDateToMMDDYYYY(date); // "MM/dd/yyyy" format
+        const booked = availabilityMap[dateKey] ?? 0;
+        return limit - booked;
+    }, [availabilityMap]);
 
     // --------------------------------------------------------------------------
-    // 6. CART AGGREGATION PIPELINE
-    // --------------------------------------------------------------------------
-    const totalCartCount = useMemo(() => {
-        return Object.entries(checkedCategoryMap).reduce((count, [key, isChecked]) => {
-            if (!isChecked) return count;
-            const item = categoryDetails.find((cat) => cat.id === key);
-            const isQty = checkQtyCounterEnabled(item?.qtyCounter);
-            return count + (isQty ? categoryQuantitiesMap[key] || 1 : 1);
-        }, 0);
-    }, [checkedCategoryMap, categoryDetails, categoryQuantitiesMap, checkQtyCounterEnabled]);
-
-    const totalCartAmount = useMemo(() => {
-        return Object.entries(checkedCategoryMap).reduce((total, [key, isChecked]) => {
-            if (!isChecked) return total;
-            const item = categoryDetails.find((cat) => cat.id === key);
-            if (!item) return total;
-
-            const price = item.parsedAmount > 0 ? item.parsedAmount : parseFloat(customAmountMap[key] || 0);
-            const isQty = checkQtyCounterEnabled(item.qtyCounter);
-            const qty = isQty ? categoryQuantitiesMap[key] || 1 : 1;
-
-            return total + price * qty;
-        }, 0);
-    }, [checkedCategoryMap, categoryDetails, customAmountMap, categoryQuantitiesMap, checkQtyCounterEnabled]);
-
-    // --------------------------------------------------------------------------
-    // 7. ACTION DISPATCHERS & HANDLERS
+    // 7. ACTION DISPATCHERS WITH GLOBAL CART STORE SYNC
     // --------------------------------------------------------------------------
 
     const handleCategorySelect = (categoryName) => {
@@ -361,71 +457,133 @@ export const useGeneralDonation = () => {
         }));
     };
 
-    const handleCustomAmountChange = (key, value) => {
-        const parsed = parseFloat(value);
-        if (!isNaN(parsed) && parsed > 0) {
-            setCustomAmountMap((prev) => ({ ...prev, [key]: parsed }));
-            setCheckedCategoryMap((prev) => ({ ...prev, [key]: true }));
-        } else {
-            setCustomAmountMap((prev) => ({ ...prev, [key]: '' }));
-            setCheckedCategoryMap((prev) => ({ ...prev, [key]: false }));
-        }
-    };
-
-    const handleQuantityIncrement = (key) => {
-        setCategoryQuantitiesMap((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-        setCheckedCategoryMap((prev) => ({ ...prev, [key]: true }));
-    };
-
-    const handleQuantityDecrement = (key) => {
-        setCategoryQuantitiesMap((prev) => ({
-            ...prev,
-            [key]: Math.max((prev[key] || 1) - 1, 1)
-        }));
-    };
-
+    // Synchronized Checkbox Handler
     const handleCheckboxChange = (key, isChecked, item) => {
         const isDtVisible = checkDateVisibility(item?.isDTVisible);
         const selectedDates = selectedDatesMap[key] || [];
 
-        // Mandatory Date Guard: Prevent selection without picked date
         if (isChecked && isDtVisible && selectedDates.length === 0) {
-            setWarningMessage('Date Required: Please pick a date before selecting this service.');
+            setWarningMessage('Date Required: Please select a date to proceed with this service.');
             return;
         }
 
         setWarningMessage('');
-        setCheckedCategoryMap((prev) => ({ ...prev, [key]: isChecked }));
-        if (isChecked && (!categoryQuantitiesMap[key] || categoryQuantitiesMap[key] < 1)) {
-            setCategoryQuantitiesMap((prev) => ({ ...prev, [key]: 1 }));
+
+        if (isChecked) {
+            const price = item.parsedAmount > 0 ? item.parsedAmount : parseFloat(customAmountMap[key] || 0);
+            const payload = {
+                id: item.id,
+                refDataName: item.refDataName,
+                serviceTypes: item.serviceTypes,
+                serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
+                amount: price,
+                quantity: 1,
+                image: item.image,
+                selectedDates: selectedDatesMap[key] || [],
+                selectedTime: selectedTimeMap[key] || ''
+            };
+            addItemToGlobalCart(payload);
+        } else {
+            removeItemFromGlobalCart(item.id);
         }
     };
 
-    // Date Modal Open/Close with Modal Lock
-    const handleOpenDatePicker = (item) => {
-        if (timeModal.isOpen) return; // Mutex Stacking Lock
+    // Synchronized Custom Amount Handler
+    const handleCustomAmountChange = (key, value) => {
+        const item = categoryDetails.find((cat) => cat.id === key);
+        if (!item) return;
 
-        const availableDates = calculateAvailableDates({
-            dayTypes: item?.dayTypes,
-            startDate: item?.startDate,
-            endDate: item?.endDate,
-            holdingDates: item?.holdingDates
-        });
+        const parsed = parseFloat(value);
+        setCustomAmountMap((prev) => ({ ...prev, [key]: value }));
+
+        if (!isNaN(parsed) && parsed > 0) {
+            const isDtVisible = checkDateVisibility(item.isDTVisible);
+            const selectedDates = selectedDatesMap[key] || [];
+
+            if (isDtVisible && selectedDates.length === 0) {
+                setWarningMessage('Date Required: Please select a date to proceed with this service.');
+                return;
+            }
+
+            setWarningMessage('');
+            addItemToGlobalCart({
+                id: item.id,
+                refDataName: item.refDataName,
+                serviceTypes: item.serviceTypes,
+                serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
+                amount: parsed,
+                quantity: categoryQuantitiesMap[key] || 1,
+                image: item.image,
+                selectedDates: selectedDatesMap[key] || [],
+                selectedTime: selectedTimeMap[key] || ''
+            });
+        } else {
+            removeItemFromGlobalCart(key);
+        }
+    };
+
+    // Synchronized Quantity Handlers
+    const handleQuantityIncrement = (key) => {
+        const item = categoryDetails.find((cat) => cat.id === key);
+        if (!item) return;
+
+        const currentQty = categoryQuantitiesMap[key] || 0;
+        const nextQty = currentQty + 1;
+
+        if (currentQty === 0) {
+            const price = item.parsedAmount > 0 ? item.parsedAmount : parseFloat(customAmountMap[key] || 0);
+            addItemToGlobalCart({
+                id: item.id,
+                refDataName: item.refDataName,
+                serviceTypes: item.serviceTypes,
+                serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
+                amount: price,
+                quantity: 1,
+                image: item.image,
+                selectedDates: selectedDatesMap[key] || [],
+                selectedTime: selectedTimeMap[key] || ''
+            });
+        } else {
+            updateGlobalQuantity(key, nextQty);
+        }
+    };
+
+    const handleQuantityDecrement = (key) => {
+        const currentQty = categoryQuantitiesMap[key] || 1;
+        if (currentQty > 1) {
+            updateGlobalQuantity(key, currentQty - 1);
+        } else {
+            removeItemFromGlobalCart(key);
+        }
+    };
+
+    // Date Modal Handlers with Mutex Lock
+    const handleOpenDatePicker = (item) => {
+        const acquired = acquireModalLock('DONATION_DATE_MODAL');
+        if (!acquired) return;
+
+        const tithi = extractTithiKeyword(item?.dayTypes);
+        if (tithi) {
+            setActiveTithi(tithi);
+        } else {
+            setActiveTithi(null);
+        }
 
         setDateModal({
             isOpen: true,
             item,
             isCustomSlot: checkBookingLimitPerDay(item?.bookingLimitPerDay),
-            availableDates
+            tithiKeyword: tithi
         });
     };
 
     const handleCloseDatePicker = () => {
+        releaseModalLock('DONATION_DATE_MODAL');
         setDateModal({
             isOpen: false,
             item: null,
             isCustomSlot: false,
-            availableDates: []
+            tithiKeyword: null
         });
     };
 
@@ -436,7 +594,7 @@ export const useGeneralDonation = () => {
         const occurrences = getSelectedOccurrences(
             pickedDate,
             dateModal.item.serviceOccurrencesNo,
-            dateModal.availableDates
+            modalAvailableDates
         );
 
         setSelectedDatesMap((prev) => ({
@@ -444,13 +602,22 @@ export const useGeneralDonation = () => {
             [serviceKey]: occurrences
         }));
 
+        // Update global cart if item is already present
+        if (checkedCategoryMap[serviceKey]) {
+            const existing = cartItems.find((i) => i.id === serviceKey);
+            if (existing) {
+                addItemToGlobalCart({
+                    ...existing,
+                    selectedDates: occurrences
+                });
+            }
+        }
+
         handleCloseDatePicker();
     };
 
-    // Time Modal Open/Close with Operating Hours Validation
+    // Time Modal Handlers with Mutex Lock
     const handleOpenTimePicker = (item) => {
-        if (dateModal.isOpen) return; // Mutex Stacking Lock
-
         const serviceKey = item?.id;
         const isDtVisible = checkDateVisibility(item?.isDTVisible);
         const selectedDates = selectedDatesMap[serviceKey] || [];
@@ -460,10 +627,14 @@ export const useGeneralDonation = () => {
             return;
         }
 
+        const acquired = acquireModalLock('DONATION_TIME_MODAL');
+        if (!acquired) return;
+
         setTimeModal({ isOpen: true, item });
     };
 
     const handleCloseTimePicker = () => {
+        releaseModalLock('DONATION_TIME_MODAL');
         setTimeModal({ isOpen: false, item: null });
     };
 
@@ -471,7 +642,7 @@ export const useGeneralDonation = () => {
         if (!timeModal.item || !timeString) return;
         const serviceKey = timeModal.item.id;
 
-        // Operating hours check: 9:00 AM to 9:00 PM
+        // Operating hours check: 9 AM to 9 PM
         const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
         if (match) {
             const [, hours, minutes, modifier] = match;
@@ -485,7 +656,6 @@ export const useGeneralDonation = () => {
                 return;
             }
 
-            // Past time validation for current date
             const now = new Date();
             const selectedDates = selectedDatesMap[serviceKey] || [];
             const selectedDate = selectedDates.length > 0 ? selectedDates[0] : now;
@@ -510,17 +680,26 @@ export const useGeneralDonation = () => {
             [serviceKey]: timeString
         }));
 
+        if (checkedCategoryMap[serviceKey]) {
+            const existing = cartItems.find((i) => i.id === serviceKey);
+            if (existing) {
+                addItemToGlobalCart({
+                    ...existing,
+                    selectedTime: timeString
+                });
+            }
+        }
+
         handleCloseTimePicker();
     };
 
-    // Non-blocking Checkout Trigger
     const handleCheckoutClick = () => {
         if (totalCartCount === 0) {
             setWarningMessage('Empty Cart: Please select at least one donation service.');
             return;
         }
 
-        logControllerTelemetry('info', 'Donation checkout initiated', {
+        logControllerTelemetry('info', 'Donation checkout initiated from global cart', {
             totalCartCount,
             totalCartAmount,
             currencySymbol
@@ -538,6 +717,7 @@ export const useGeneralDonation = () => {
             filteredCategoryDetails,
             isLoading: isCategoriesLoading || isDetailsLoading,
             hasError: isCategoriesError || isDetailsError,
+            isTithiLoading,
             searchQuery,
             currencySymbol,
             totalCartCount,
@@ -548,7 +728,10 @@ export const useGeneralDonation = () => {
             selectedDatesMap,
             selectedTimeMap,
             expandedDescMap,
-            dateModal,
+            dateModal: {
+                ...dateModal,
+                availableDates: modalAvailableDates
+            },
             timeModal,
             warningMessage
         },
@@ -578,4 +761,3 @@ export const useGeneralDonation = () => {
         }
     };
 };
-
