@@ -4,21 +4,26 @@ import { ENDPOINTS } from '../../../constants/apiConstants';
 import { buildComponentConfigPayload } from '../../../utils/apiPayloadBuilder';
 import { ENV_CONFIG } from "../../../constants/envConfig";
 
+export const HINDU_TITHIS = Object.freeze([
+    'PRATIPADA',
+    'DWITIYA',
+    'TRITIYA',
+    'CHATURTHI',
+    'PANCHAMI',
+    'SHASHTHI',
+    'SAPTAMI',
+    'ASHTAMI',
+    'NAVAMI',
+    'DASHAMI',
+    'EKADASHI',
+    'DWADASHI',
+    'TRAYODASHI',
+    'CHATURDASHI',
+    'PURNIMA',
+    'AMAVASYA',
+    'SANKASHTI'
+]);
 
-// Version-locked Master Data Config
-// const PRODUCT_ID = '62c807133d9ee4045ab78d4d';
-// const CLIENT_ID = '66391d25c742322da009f702';
-
-// ============================================================================
-// ENTERPRISE OBSERVABILITY & TELEMETRY
-// ============================================================================
-
-/**
- * Dispatches structured logs for APM / Observability tooling (e.g., Sentry, Datadog).
- * @param {'info' | 'warn' | 'error'} level - Log severity level
- * @param {string} message - Human-readable diagnostic description
- * @param {Object} [context={}] - Metadata payload including breadcrumbs and IDs
- */
 const logTelemetry = (level, message, context = {}) => {
     const telemetryEvent = {
         timestamp: new Date().toISOString(),
@@ -41,15 +46,6 @@ const logTelemetry = (level, message, context = {}) => {
     }
 };
 
-// ============================================================================
-// DEFENSIVE DATA ADAPTERS & PARSERS
-// ============================================================================
-
-/**
- * Parses MM/DD/YYYY formatted string into a JavaScript Date object at midnight.
- * @param {string} dateStr - Date string in MM/DD/YYYY format
- * @returns {Date|null} Midnight Date instance or null if invalid
- */
 export const parseDateString = (dateStr) => {
     if (!dateStr || typeof dateStr !== 'string' || !dateStr.trim()) {
         return null;
@@ -73,11 +69,33 @@ export const parseDateString = (dateStr) => {
     return null;
 };
 
-/**
- * Normalizes raw categories response into an active, sorted array.
- * @param {Object} rawData - Backend response payload
- * @returns {Array<Object>} Sanitized category list
- */
+export const parseIsoDateAgnostic = (isoString) => {
+    if (!isoString || typeof isoString !== 'string') return null;
+
+    try {
+        const cleanDate = isoString.split('T')[0]; // "2026-10-14"
+        const [year, month, day] = cleanDate.split('-').map((val) => parseInt(val, 10));
+
+        if (!year || !month || !day) return null;
+        return new Date(year, month - 1, day, 0, 0, 0, 0);
+    } catch (error) {
+        logTelemetry('warn', 'ISO Date parsing failed', { isoString, error: error.message });
+        return null;
+    }
+};
+
+export const extractTithiKeyword = (dayTypes) => {
+    if (!dayTypes || typeof dayTypes !== 'string') return null;
+    const upper = dayTypes.toUpperCase();
+
+    for (const tithi of HINDU_TITHIS) {
+        if (upper.includes(tithi)) {
+            return tithi;
+        }
+    }
+    return null;
+};
+
 export const adaptCategoriesData = (rawData) => {
     try {
         const rawList = Array.isArray(rawData?.data)
@@ -107,12 +125,6 @@ export const adaptCategoriesData = (rawData) => {
     }
 };
 
-/**
- * Filters and sanitizes raw Category Details (ServiceSetup) records.
- * Excludes inactive or expired items and normalizes casing variations.
- * @param {Object} rawData - Backend response payload
- * @returns {Array<Object>} Sanitized active service setup items
- */
 export const adaptCategoryDetailsData = (rawData) => {
     try {
         const rawList = Array.isArray(rawData?.data)
@@ -180,16 +192,75 @@ export const adaptCategoryDetailsData = (rawData) => {
     }
 };
 
-// ============================================================================
-// 1. QUERY: DONATION CATEGORIES
-// ============================================================================
+export const adaptTithiDatesData = (rawData) => {
+    try {
+        const rawList = Array.isArray(rawData?.data)
+            ? rawData.data
+            : Array.isArray(rawData?.data?.data)
+                ? rawData.data.data
+                : [];
 
-/**
- * Fetches active donation categories under refDataCode "DONATIONS".
- * @param {Object} context - TanStack Query execution context
- * @param {AbortSignal} context.signal - Native query cancellation signal
- * @returns {Promise<Array<Object>>} Resolved category list
- */
+        const now = new Date();
+        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+        return rawList
+            .map((item) => {
+                const parsedDate = parseIsoDateAgnostic(item?.startDate);
+                return {
+                    id: item?._id || '',
+                    date: parsedDate,
+                    paksha: item?.Paksha || '',
+                    tithiDesc: item?.Tithi || '',
+                    tithiName: item?.TithiName || ''
+                };
+            })
+            .filter((item) => item.date !== null && item.date >= todayMidnight)
+            .sort((a, b) => a.date.getTime() - b.date.getTime());
+    } catch (error) {
+        logTelemetry('error', 'Exception in adaptTithiDatesData', { error: error.message });
+        return [];
+    }
+};
+
+export const formatDateToMMDDYYYY = (date) => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+};
+
+export const adaptClientSettings = (rawData) => {
+    const generalSetting =
+        rawData?.result?.data?.[0]?.generalSetting ||
+        rawData?.data?.[0]?.generalSetting ||
+        {};
+
+    return {
+        currencySymbol: (generalSetting?.currencySymbol || '$').trim(),
+        currencyCode: generalSetting?.currencyCode || 'USD',
+        showSankalpam: Boolean(generalSetting?.showSanaklpam),
+        generalDonationAmount: Boolean(generalSetting?.GeneralDonationAmount)
+    };
+};
+
+export const adaptServiceAvailability = (rawData) => {
+    // Agar statusCode "-1" ("Data Not Found") ho, iska matlab ZERO bookings hain
+    if (rawData?.statusCode === '-1' || rawData?.statusCode === -1 || !Array.isArray(rawData?.data)) {
+        return {};
+    }
+
+    const availabilityMap = {};
+    rawData.data.forEach((item) => {
+        const dateKey = (item?._id || item?.id || '').trim(); // MM/dd/yyyy
+        if (dateKey) {
+            availabilityMap[dateKey] = parseInt(item?.count ?? 0, 10);
+        }
+    });
+
+    return availabilityMap;
+};
+
 const fetchDonationCategories = async ({ signal }) => {
     const payload = buildComponentConfigPayload({
         query: {
@@ -221,10 +292,6 @@ const fetchDonationCategories = async ({ signal }) => {
     }
 };
 
-/**
- * Hook to retrieve and cache active donation category tabs.
- * @returns {import('@tanstack/react-query').UseQueryResult<Array<Object>>}
- */
 export const useGetDonationCategories = () => {
     return useQuery({
         queryKey: ['donations', 'categories'],
@@ -236,17 +303,6 @@ export const useGetDonationCategories = () => {
     });
 };
 
-// ============================================================================
-// 2. QUERY: DONATION CATEGORY DETAILS
-// ============================================================================
-
-/**
- * Fetches active services setup under a specific category tab.
- * @param {Object} context - TanStack Query execution context
- * @param {Array} context.queryKey - Array containing query identifiers and categoryName
- * @param {AbortSignal} context.signal - Native query cancellation signal
- * @returns {Promise<Array<Object>>} Resolved service details list
- */
 const fetchDonationDetails = async ({ queryKey, signal }) => {
     const [, , categoryName] = queryKey;
 
@@ -290,11 +346,6 @@ const fetchDonationDetails = async ({ queryKey, signal }) => {
     }
 };
 
-/**
- * Hook to retrieve and cache donation service items for a selected category tab.
- * @param {string} categoryName - refDataName of the active tab
- * @returns {import('@tanstack/react-query').UseQueryResult<Array<Object>>}
- */
 export const useGetDonationCategoryDetails = (categoryName) => {
     return useQuery({
         queryKey: ['donations', 'details', categoryName],
@@ -304,6 +355,121 @@ export const useGetDonationCategoryDetails = (categoryName) => {
         gcTime: 1000 * 60 * 15,
         refetchOnWindowFocus: false,
         retry: 2
+    });
+};
+
+export const fetchTithiDates = async ({ tithi, signal }) => {
+    if (!tithi || typeof tithi !== 'string' || !tithi.trim()) {
+        return [];
+    }
+
+    const payload = {
+        componentConfig: {
+            moduleName: 'Temple Services',
+            aspectType: 'ServiceSetup',
+            productID: ENV_CONFIG.PRODUCT_ID,
+            clientID: ENV_CONFIG.CLIENT_ID,
+            tithi: tithi.trim().toUpperCase()
+        }
+    };
+
+    try {
+        // Tithi API is hosted on aspgenpre.vaaptech.com:9000 as per contract
+        const response = await apiClient.post(
+            ENDPOINTS.GET_THITHI_NEXT_90_DAYS,
+            payload,
+            {
+                signal,
+            }
+        );
+
+        return adaptTithiDatesData(response);
+    } catch (error) {
+        if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+            return [];
+        }
+        logTelemetry('error', `Failed fetching Tithi dates for [${tithi}]`, { error: error.message });
+        return [];
+    }
+};
+
+export const useGetTithiDates = (tithi) => {
+    const canonicalTithi = extractTithiKeyword(tithi);
+
+    return useQuery({
+        queryKey: ['tithi', 'next90days', canonicalTithi],
+        queryFn: ({ signal }) => fetchTithiDates({ tithi: canonicalTithi, signal }),
+        enabled: Boolean(canonicalTithi),
+        staleTime: 1000 * 60 * 60 * 12, // Cache for 12 hours (Panchangam dates are stable)
+        gcTime: 1000 * 60 * 60 * 24,
+        refetchOnWindowFocus: false,
+        retry: 1
+    });
+};
+
+const fetchClientSettings = async ({ signal }) => {
+    const payload = {
+        action: 'getClientSetting',
+        productId: ENV_CONFIG.PRODUCT_ID,
+        clientId: ENV_CONFIG.CLIENT_ID
+    };
+
+    try {
+        const response = await apiClient.post(
+            ENDPOINTS.CLIENT_SETTINGS,
+            payload,
+            { signal, pre: false } // Settings API aspgen par hai
+        );
+        return adaptClientSettings(response);
+    } catch (error) {
+        if (error?.name === 'CanceledError') return adaptClientSettings({});
+        return adaptClientSettings({});
+    }
+};
+
+export const useGetClientSettings = () => {
+    return useQuery({
+        queryKey: ['temple', 'clientSettings', ENV_CONFIG.CLIENT_ID],
+        queryFn: fetchClientSettings,
+        staleTime: 1000 * 60 * 60, // 1 hour cache
+        refetchOnWindowFocus: false,
+        retry: 1
+    });
+};
+
+const fetchServiceAvailability = async ({ queryKey, signal }) => {
+    const [, , serviceSetup, serviceTypes] = queryKey;
+
+    const payload = {
+        clientId: ENV_CONFIG.CLIENT_ID,
+        aspectType: 'serviceBooking',
+        ServiceSetup: serviceSetup,
+        startDate: '',
+        endDate: '',
+        serviceTypes: serviceTypes
+    };
+
+    try {
+        const response = await apiClient.post(
+            ENDPOINTS.GET_SERVICE_AVAILABILITY,
+            payload,
+            { signal, pre: true } 
+        );
+        return adaptServiceAvailability(response);
+    } catch (error) {
+        if (error?.name === 'CanceledError') return {};
+        return {};
+    }
+};
+
+export const useGetServiceAvailability = (serviceSetup, serviceTypes, enabled = false) => {
+    return useQuery({
+        queryKey: ['booking', 'availability', serviceSetup, serviceTypes],
+        queryFn: fetchServiceAvailability,
+        enabled: Boolean(enabled && serviceSetup && serviceTypes),
+        staleTime: 1000 * 60 * 2, // 2 minutes cache
+        refetchOnWindowFocus: false,
+        retry: 1
     });
 };
 
