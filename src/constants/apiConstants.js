@@ -20,5 +20,7 @@ export const ENDPOINTS = Object.freeze({
     VOLUNTEER_SIGNUP_API: 'api/volunteer/addVolunteer',
     GET_THITHI_NEXT_90_DAYS:'/api/event/getThithiNext90Days',
     CLIENT_SETTINGS: '/api/appsettings/setting',
-    GET_SERVICE_AVAILABILITY: '/api/bookingService/getServiceAvailability'
+    GET_SERVICE_AVAILABILITY: '/api/bookingService/getServiceAvailability',
+    CHECK_USER_EXIST: '/api/customerDetails/checkDevoteExistWeb',
+    CUSTOMER_LOGIN: '/api/customerDetails/customerLoginWeb'
 });
