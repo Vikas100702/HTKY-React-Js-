@@ -1,18 +1,7 @@
-/**
- * @file src/hooks/queries/useGetNavMenu.js
- * @description TanStack Query hook to fetch dynamic Navigation Menu items.
- * Includes a robust Data Adapter to handle API schema changes seamlessly.
- */
-
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { ENDPOINTS } from '../../constants/apiConstants';
 import { buildComponentConfigPayload } from '../../utils/apiPayloadBuilder';
-
-/**
- * Fallback static menu array in case the API is offline or returns empty data.
- * zero-downtime UI rendering.
- */
 
 const DEFAULT_NAV_ITEMS = [
     { id: '1', title: 'HOME', path: '/' },
@@ -35,7 +24,7 @@ const DEFAULT_NAV_ITEMS = [
     },
     {
         id: '4', title: 'DONATIONS', subMenu: [
-            { id: '4-1', title: 'GENERAL DONATION', path: '/general-donation' },
+            { id: '4-1', title: 'GENERAL DONATION', path: '/donations/general' },
             { id: '4-2', title: 'RECURRING DONATION', path: '/recurring-donation' },
         ]
     },
@@ -69,14 +58,6 @@ const DEFAULT_NAV_ITEMS = [
     },
 ];
 
-/**
- * 1. Data Adapter ("Mapper" Equivalent)
- * Safely parses raw API response into a clean, array-based menu structure.
- * Handles nested submenus/dropdowns if present in the backend response.
- * * @param {Object} rawData - Raw JSON response from the API
- * @returns {Array} Sanitized array of navigation menu objects
- */
-
 const adaptNavMenuData = (rawData) => {
     try {
         if (!rawData?.data || rawData.data.length === 0) {
@@ -104,11 +85,6 @@ const adaptNavMenuData = (rawData) => {
     }
 };
 
-/**
- * 2. Service Function
- * Executes network request passing AbortController signal for memory safety.
- */
-
 const fetchNavMenu = async ({ signal }) => {
     const payload = buildComponentConfigPayload({
         moduleName: 'Navigation Menu',
@@ -125,9 +101,6 @@ const fetchNavMenu = async ({ signal }) => {
     return adaptNavMenuData(response);
 };
 
-/**
- * 3. Custom Hook (Server State Manager)
- */
 export const useGetNavMenu = () => {
     return useQuery({
         queryKey: ['navMenu'],
@@ -137,3 +110,4 @@ export const useGetNavMenu = () => {
         refetchOnWindowFocus: false,
     });
 };
+
