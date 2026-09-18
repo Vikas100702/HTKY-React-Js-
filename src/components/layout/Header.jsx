@@ -1,4 +1,5 @@
 import { useGetHeaderSettings } from "../../hooks/queries/useGetHeaderSettings";
+import { useModalStore } from "../../store/useModalStore";
 import { APP_COLORS } from "../../constants/appColors";
 import { APP_STRINGS } from "../../constants/appStrings";
 import { APP_FONTS } from "../../constants/appTheme";
@@ -10,6 +11,8 @@ export const Header = () => {
     isLoading: isHeaderLoading,
     isError: isHeaderError,
   } = useGetHeaderSettings();
+
+  const openModal = useModalStore((state) => state.openModal);
 
   if (isHeaderLoading) {
     return (
@@ -123,6 +126,9 @@ export const Header = () => {
           <button
             className="text-white px-4 py-3 md:px-8 md:py-2 text-sm md:text-base font-bold tracking-wide hover:opacity-90 transition-opacity w-full xl:w-auto rounded-sm"
             style={{ backgroundColor: APP_COLORS.primary }}
+            onClick={() =>
+              openModal("SIGN_IN", { logoUrl: headerData?.logoUrl })
+            }
           >
             {APP_STRINGS.btnSignIn}
           </button>
