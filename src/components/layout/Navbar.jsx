@@ -1,10 +1,3 @@
-/**
- * @file src/components/layout/Navbar.jsx
- * @description Dynamic Navigation Bar component driven by the useGetNavMenu hook
- * and synchronized reactively with the global Zustand cart store (useCartStore).
- * Resolves path collisions for General Donation routes and connects interactive cart triggers.
- */
-
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useGetNavMenu } from "../../hooks/queries/useGetNavMenu";
@@ -13,13 +6,6 @@ import { APP_FONTS } from "../../constants/appTheme";
 import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "../../store/useCartStore";
 
-/**
- * Resolves canonical route destinations for dynamic menu items.
- * Neutralizes dead-hash '#' collisions for unconfigured backend items.
- *
- * @param {Object} item - Menu item configuration from Master Data
- * @returns {string} Sanitized destination URL path
- */
 const resolveSafePath = (item) => {
   if (!item) return "/";
 
@@ -359,3 +345,4 @@ export const Navbar = () => {
     </nav>
   );
 };
+
