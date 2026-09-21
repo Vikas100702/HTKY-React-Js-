@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { X, AlertCircle, Info, Loader2 } from "lucide-react";
 import { PhoneInputField } from "../ui/PhoneInputField";
 import { useSignInController } from "../../hooks/queries/Auth/useSignInController";
@@ -8,8 +8,25 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+1");
 
+  // null = dono active (jab dono khali hon) | 'email' = email active, phone dead | 'phone' = phone active, email dead
+  const [activeField, setActiveField] = useState(null);
+
+  const emailInputRef = useRef(null);
+  const phoneContainerRef = useRef(null);
+
+  const isEmailDead = activeField === "phone";
+  const isPhoneDead = activeField === "email";
+
   const { handleSignInSequence, isLoading, error, registrationMsg } =
     useSignInController();
+
+  const handleClose = useCallback(() => {
+    if (isLoading) return;
+    setEmail("");
+    setPhone("");
+    setActiveField(null);
+    onClose?.();
+  }, [isLoading, onClose]);
 
   // Handle Viewport Scroll Lock & Escape Key Listeners
   useEffect(() => {
@@ -19,8 +36,8 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" && typeof onClose === "function" && !isLoading) {
-        onClose();
+      if (e.key === "Escape" && !isLoading) {
+        handleClose();
       }
     };
 
@@ -30,7 +47,50 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose, isLoading]);
+  }, [isOpen, isLoading, handleClose]);
+
+  // Email typing handler
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setEmail(val);
+    if (val.trim().length > 0) {
+      setActiveField("email");
+    } else {
+      setActiveField(null);
+    }
+  };
+
+  // Phone typing handler
+  const handlePhoneChange = (e) => {
+    const val = e.target.value;
+    setPhone(val);
+    if (val && String(val).trim().length > 0) {
+      setActiveField("phone");
+    } else {
+      setActiveField(null);
+    }
+  };
+
+  // Dead email field par tap karne par
+  const handleEmailTap = () => {
+    if (!isEmailDead) return;
+    setPhone("");
+    setActiveField("email");
+    setTimeout(() => {
+      emailInputRef.current?.focus();
+    }, 0);
+  };
+
+  // Dead phone field par tap karne par
+  const handlePhoneTap = () => {
+    if (!isPhoneDead) return;
+    setEmail("");
+    setActiveField("phone");
+    setTimeout(() => {
+      const input = phoneContainerRef.current?.querySelector("input");
+      input?.focus();
+    }, 0);
+  };
 
   if (!isOpen) return null;
 
@@ -39,9 +99,9 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
     if (isLoading) return;
 
     await handleSignInSequence({
-      email: email.trim(),
-      phone: phone, // Already stripped of dial code by PhoneInputField
-      countryCode: countryCode, // Stored for future session needs
+      email: isEmailDead ? "" : email.trim(),
+      phone: isPhoneDead ? "" : phone,
+      countryCode: countryCode,
     });
   };
 
@@ -54,14 +114,14 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
     >
       <div
         className="fixed inset-0 cursor-pointer"
-        onClick={() => !isLoading && onClose()}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
       <div className="relative z-10 w-full max-w-[400px] bg-white bg-[url('/src/assets/bg-card.png')] bg-cover bg-center shadow-2xl animate-in zoom-in-95 duration-200 rounded-md border border-gray-200">
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           type="button"
           disabled={isLoading}
           className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-white/60 hover:bg-gray-100 p-1.5 rounded-full transition-all focus:outline-none disabled:opacity-50"
@@ -128,15 +188,26 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
               Devotee
             </button>
 
-            <input
-              type="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email Id."
-              disabled={isLoading}
-              className="w-full border border-gray-300 rounded px-3 py-2.5 text-[15px] text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#900000] focus:ring-1 focus:ring-[#900000] transition-colors mb-4 bg-white/95 disabled:bg-gray-100 disabled:opacity-70"
-            />
+            {/* Email Field Wrapper */}
+            <div
+              onClick={handleEmailTap}
+              className={`w-full mb-4 transition-opacity duration-200 ${
+                isEmailDead ? "opacity-40 cursor-pointer" : "opacity-100"
+              }`}
+            >
+              <div className={isEmailDead ? "pointer-events-none" : ""}>
+                <input
+                  ref={emailInputRef}
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  placeholder="Enter your email Id."
+                  disabled={isLoading}
+                  className="w-full border border-gray-300 rounded px-3 py-2.5 text-[15px] text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#900000] focus:ring-1 focus:ring-[#900000] transition-colors bg-white/95 disabled:bg-gray-100 disabled:opacity-70"
+                />
+              </div>
+            </div>
 
             <div className="flex items-center justify-center w-full mb-4">
               <span className="text-gray-900 text-[14px] font-medium px-2 bg-white/50 rounded">
@@ -144,13 +215,22 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
               </span>
             </div>
 
-            <div className="w-full mb-8 relative z-50">
-              <PhoneInputField
-                name="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                onCountryChange={(code) => setCountryCode(code)}
-              />
+            {/* Phone Field Wrapper */}
+            <div
+              ref={phoneContainerRef}
+              onClick={handlePhoneTap}
+              className={`w-full mb-8 relative z-50 transition-opacity duration-200 ${
+                isPhoneDead ? "opacity-40 cursor-pointer" : "opacity-100"
+              }`}
+            >
+              <div className={isPhoneDead ? "pointer-events-none" : ""}>
+                <PhoneInputField
+                  name="phone"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  onCountryChange={(code) => setCountryCode(code)}
+                />
+              </div>
             </div>
 
             <button
