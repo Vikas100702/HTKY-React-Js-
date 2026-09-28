@@ -18,9 +18,11 @@ export const ENDPOINTS = Object.freeze({
     SUBMIT_FORM_DATA_API: 'api/emailSend/sendContactEmail',
     VOLUNTEER_UPLOAD_PHOTO_API: 'api/upload/docsmany',
     VOLUNTEER_SIGNUP_API: 'api/volunteer/addVolunteer',
-    GET_THITHI_NEXT_90_DAYS:'/api/event/getThithiNext90Days',
+    GET_THITHI_NEXT_90_DAYS: '/api/event/getThithiNext90Days',
     CLIENT_SETTINGS: '/api/appsettings/setting',
     GET_SERVICE_AVAILABILITY: '/api/bookingService/getServiceAvailability',
     CHECK_USER_EXIST: '/api/customerDetails/checkDevoteExistWeb',
-    CUSTOMER_LOGIN: '/api/customerDetails/customerLoginWeb'
+    CUSTOMER_LOGIN: '/api/customerDetails/customerLoginWeb',
+    SEND_EMAIL_CODE: '/api/auth/sendMemberAuthCode',
+    VERIFY_EMAIL_CODE: '/api/auth/verifyMemberCode',
 });
