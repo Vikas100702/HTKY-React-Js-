@@ -11,7 +11,7 @@ import {
     useGetStates,
     useGetCities,
 } from "../../Seva/VolunteerSignup/useGetVolunteerSignUp";
-import { ENV_CONFIG } from "../../../../constants/envConfig";
+import { ENV_CONFIG } from "../../../../config/envConfig";
 import { useToastStore } from "../../../../store/useToastStore";
 
 export const useVolunteerForm = () => {

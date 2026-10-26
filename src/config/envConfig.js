@@ -14,10 +14,12 @@
  * @returns {string} Environment variable value or safe empty string
  */
 
-const getSecureEnvVar = (key) => {
+const getSecureEnvVar = (key, isOptional = false) => {
     const value = import.meta.env[key];
     if (!value) {
-        console.error(`[ENV Critical] Missing required environment variable: ${key}. Check your .env file. APIs relying on this will fail gracefully.`);
+        if(!isOptional) {
+            console.error(`[ENV Critical] Missing required environment variable: ${key}. Check your .env file.`);
+        }
         return ""; // Empty string prevents UI hard crashes, delegates failure to API layer.
     }
     return value;
@@ -31,4 +33,14 @@ export const ENV_CONFIG = Object.freeze({
     CLIENT_ID: getSecureEnvVar("VITE_CLIENT_ID"),
     PARAYANAM_EVENT_ID: getSecureEnvVar("VITE_PARAYANAM_EVENT_ID"),
     PARAYANAM_MEMBER_ID: getSecureEnvVar("VITE_PARAYANAM_MEMBER_ID"),
+});
+
+export const FIREBASE_CONFIG = Object.freeze({
+    apiKey: getSecureEnvVar("VITE_FIREBASE_API_KEY"),
+    authDomain: getSecureEnvVar("VITE_FIREBASE_AUTH_DOMAIN"),
+    projectId: getSecureEnvVar("VITE_FIREBASE_PROJECT_ID"),
+    storageBucket: getSecureEnvVar("VITE_FIREBASE_STORAGE_BUCKET"),
+    messagingSenderId: getSecureEnvVar("VITE_FIREBASE_MESSAGING_SENDER_ID"),
+    appId: getSecureEnvVar("VITE_FIREBASE_APP_ID"),
+    measurementId: getSecureEnvVar("VITE_FIREBASE_MEASUREMENT_ID", true)
 });

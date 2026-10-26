@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
 import { BASE_URL, ENDPOINTS } from '../../../constants/apiConstants';
-import { ENV_CONFIG } from '../../../constants/envConfig';
+import { ENV_CONFIG } from '../../../config/envConfig';
 import { buildComponentConfigPayload } from '../../../utils/apiPayloadBuilder';
 
 // UPCOMING EVENTS

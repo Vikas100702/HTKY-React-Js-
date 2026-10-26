@@ -7,7 +7,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { ENDPOINTS } from '../../constants/apiConstants';
-import { ENV_CONFIG} from '../../constants/envConfig';
+import { ENV_CONFIG} from '../../config/envConfig';
 
 /**
  * Helper Function: Generate Today's Date dynamically

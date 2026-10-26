@@ -1,6 +1,6 @@
 import { useGeneralDonation } from "./hooks/useGeneralDonation";
 import { DonationSlotModal } from "./Components/DonationSlotModal";
-import { ENV_CONFIG } from "../../constants/envConfig";
+import { ENV_CONFIG } from "../../config/envConfig";
 import { APP_COLORS } from "../../constants/appColors";
 
 const IMAGE_BASE_URL = ENV_CONFIG.BASE_URL;

@@ -5,7 +5,7 @@
  * Uses Object.freeze() for endpoint paths to prevent accidental runtime mutations.
  */
 
-import { ENV_CONFIG } from './envConfig';
+import { ENV_CONFIG } from '../config/envConfig';
 
 // Base URL for API calls
 export const BASE_URL = ENV_CONFIG.BASE_URL;

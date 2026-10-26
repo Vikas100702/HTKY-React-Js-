@@ -351,6 +351,8 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
                   </div>
                 </div>
 
+                <div id="recaptcha-container"></div>
+
                 <button
                   type="submit"
                   disabled={isLoading}

@@ -6,7 +6,7 @@
  * * Architectural Rule: Ensures fail-safe, predictable, and memory-safe network requests.
  */
 
-import { ENV_CONFIG } from '../constants/envConfig';
+import { ENV_CONFIG } from '../config/envConfig';
 
 /**
  * Builds the standard componentConfig payload for the Filter API.
@@ -38,7 +38,7 @@ export const buildComponentConfigPayload = ({ moduleName, aspectType, query, ski
         }
     };
 
-    if(query !== undefined) {
+    if (query !== undefined) {
         payload.componentConfig.query = query;
     }
 

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
 import { ENDPOINTS } from '../../../constants/apiConstants';
 import { buildComponentConfigPayload } from '../../../utils/apiPayloadBuilder';
-import { ENV_CONFIG } from "../../../constants/envConfig";
+import { ENV_CONFIG } from "../../../config/envConfig";
 
 export const HINDU_TITHIS = Object.freeze([
     'PRATIPADA',

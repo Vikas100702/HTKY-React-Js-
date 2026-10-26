@@ -113,16 +113,94 @@ const HomePage = lazy(() =>
     default: () => <div>Home Module Failed to Load</div>,
   })),
 );
-const GeneralDonationPage = lazy(() =>
-  import("./pages/Donations/GeneralDonation").then((m) => ({
-    default: m.GeneralDonation,
-  })),
-);
+
 const DashboardPage = lazy(() =>
   import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
 const UserProfilePage = lazy(() =>
   import("./pages/Auth/UserProfile").then((m) => ({ default: m.UserProfile })),
+);
+
+// Donations Section Lazy Imports
+const GeneralDonationPage = lazy(() =>
+  import("./pages/Donations/GeneralDonation").then((m) => ({
+    default: m.GeneralDonation,
+  })),
+);
+
+// Education Section Lazy Imports
+const AllClassesPage = lazy(() =>
+  import("./pages/Education/AllClasses").then((m) => ({
+    default: m.AllClasses,
+  })),
+);
+
+// Seva Section Lazy Imports
+const VolunteerSignupPage = lazy(() =>
+  import("./pages/Seva/VolunteerSignUp").then((m) => ({
+    default: m.VolunteerSignUp,
+  })),
+);
+
+const SeniorProgramPage = lazy(() =>
+  import("./pages/Seva/SeniorProgram").then((m) => ({
+    default: m.SeniorProgram,
+  })),
+);
+
+const GriefSupportPage = lazy(() =>
+  import("./pages/Seva/GriefSupport").then((m) => ({
+    default: m.GriefSupport,
+  })),
+);
+
+const LostFoundPage = lazy(() =>
+  import("./pages/Seva/LostFound").then((m) => ({
+    default: m.LostFound,
+  })),
+);
+
+// About Section Lazy Imports
+const AboutTemplePage = lazy(() =>
+  import("./pages/About/AboutTemple").then((m) => ({ default: m.AboutTemple })),
+);
+
+const AboutDeityPage = lazy(() =>
+  import("./pages/About/AboutDeity").then((m) => ({ default: m.AboutDeity })),
+);
+
+const AboutPriestPage = lazy(() =>
+  import("./pages/About/AboutPriest").then((m) => ({ default: m.AboutPriest })),
+);
+
+const AboutLandDonorPage = lazy(() =>
+  import("./pages/About/AboutLandDonors").then((m) => ({
+    default: m.AboutLandDonors,
+  })),
+);
+
+const AboutBoardCommitteePage = lazy(() =>
+  import("./pages/About/AboutBoardCommittee").then((m) => ({
+    default: m.AboutBoardCommittee,
+  })),
+);
+
+const AboutEtiquetteVisitsPage = lazy(() =>
+  import("./pages/About/AboutEtiquetteVisits").then((m) => ({
+    default: m.AboutEtiquetteVisit,
+  })),
+);
+
+const AboutJainSanghPage = lazy(() =>
+  import("./pages/About/AboutJainSangh").then((m) => ({
+    default: m.AboutJainSangh,
+  })),
+);
+
+const AboutShirdiSaiSatsangPage = lazy(() =>
+  import("./pages/About/AboutShirdiSaiSatsang").then((m) => ({
+    default: m.AboutShirdiSaiSatsang,
+  })),
 );
 
 const router = createBrowserRouter([
@@ -166,6 +244,154 @@ const router = createBrowserRouter([
           </AuthGuard>
         ),
       },
+
+      // Donations Section Routes
+      {
+        path: "donations/general",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <GeneralDonationPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+
+      // Education Section Routes
+      {
+        path: "all-classes",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AllClassesPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+
+      // Seva Section Routes
+      {
+        path: "volunteer-signup",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <VolunteerSignupPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "senior-program",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <SeniorProgramPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "grief-support",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <GriefSupportPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "lost-found",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <LostFoundPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+
+      // About Section Routes
+      {
+        path: "about-temple",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutTemplePage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "about-deities",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutDeityPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "about-priests",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutPriestPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "land-donors",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutLandDonorPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "board-committee-members",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutBoardCommitteePage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "etiquette-visits",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutEtiquetteVisitsPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "jain-sangh",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutJainSanghPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: "shirdi-sai-satsang",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <AboutShirdiSaiSatsangPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
       {
         path: "profile",
         element: (
@@ -193,4 +419,3 @@ export function App() {
 }
 
 export default App;
-

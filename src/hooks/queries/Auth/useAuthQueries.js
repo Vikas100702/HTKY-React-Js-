@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
 import { ENDPOINTS } from '../../../constants/apiConstants';
-import { ENV_CONFIG } from '../../../constants/envConfig';
+import { ENV_CONFIG } from '../../../config/envConfig';
 
 const AUTH_CONFIG = {
     productID: ENV_CONFIG?.PRODUCT_ID,
@@ -38,7 +38,7 @@ const checkDevoteeExist = async ({ credentials, signal }) => {
     try {
         const payload = buildAuthPayload(credentials);
         const response = await apiClient.post(
-            ENDPOINTS.CHECK_USER_EXIST || '/api/customerDetails/checkDevoteExistWeb',
+            ENDPOINTS.CHECK_USER_EXIST,
             payload,
             { signal, pre: false }
         );
