@@ -6,6 +6,7 @@ import { ENV_CONFIG } from '../../../config/envConfig';
 const AUTH_CONFIG = {
     productID: ENV_CONFIG?.PRODUCT_ID,
     clientID: ENV_CONFIG?.CLIENT_ID,
+    moduleName: "Contacts"
 };
 
 const sanitizePhoneDigits = (rawPhone) => {
@@ -73,7 +74,7 @@ const sendEmailCode = async ({ emailID, emailId, signal }) => {
         };
 
         const response = await apiClient.post(
-            ENDPOINTS.SEND_EMAIL_CODE || '/api/auth/sendMemberAuthCode',
+            ENDPOINTS.SEND_EMAIL_CODE,
             payload,
             { signal, pre: false }
         );
