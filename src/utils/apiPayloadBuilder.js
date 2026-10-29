@@ -22,7 +22,7 @@ import { ENV_CONFIG } from '../config/envConfig';
 
 export const buildComponentConfigPayload = ({ moduleName, aspectType, query, skip = 0, next = 1220, ...additionalProps }) => {
     // Ensure required fields are provided to prevent API crashes
-    if (!moduleName || !aspectType) {
+    if (!aspectType) {
         console.error('[Payload Builder] Missing required parameters: moduleName and aspectType are mandatory.');
     }
 
