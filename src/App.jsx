@@ -128,6 +128,13 @@ const ServicesPage = lazy(() =>
   })),
 );
 
+// Calendar Section Lazy Imports
+const CalendarPage = lazy(() =>
+  import("./pages/Calendar/CalendarPage").then((m) => ({
+    default: m.CalendarPage,
+  })),
+);
+
 // Donations Section Lazy Imports
 const GeneralDonationPage = lazy(() =>
   import("./pages/Donations/GeneralDonation").then((m) => ({
@@ -259,6 +266,18 @@ const router = createBrowserRouter([
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
               <ServicesPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+
+      // Calendar Section Routes
+      {
+        path: "calendar",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <CalendarPage />
             </Suspense>
           </AuthGuard>
         ),
