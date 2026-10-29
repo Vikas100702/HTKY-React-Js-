@@ -122,6 +122,13 @@ const UserProfilePage = lazy(() =>
 );
 
 // Donations Section Lazy Imports
+const ServicesPage = lazy(() =>
+  import("./pages/Services/Services").then((m) => ({
+    default: m.Services,
+  })),
+);
+
+// Donations Section Lazy Imports
 const GeneralDonationPage = lazy(() =>
   import("./pages/Donations/GeneralDonation").then((m) => ({
     default: m.GeneralDonation,
@@ -240,6 +247,18 @@ const router = createBrowserRouter([
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
               <DashboardPage />
+            </Suspense>
+          </AuthGuard>
+        ),
+      },
+
+      // Services Section Routes
+      {
+        path: "book-service",
+        element: (
+          <AuthGuard>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <ServicesPage />
             </Suspense>
           </AuthGuard>
         ),
