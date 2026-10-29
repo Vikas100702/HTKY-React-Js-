@@ -63,7 +63,18 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const activeModalServiceId = useServicesStore(
     (state) => state.activeModalServiceId,
   );
-
+  const customAmountMap = useServicesStore((state) => state.customAmountMap);
+  const updateCustomAmount = useServicesStore(
+    (state) => state.updateCustomAmount,
+  );
+  const parsedServiceAmount =
+    parseFloat(
+      String(service?.amount ?? service?.serviceAmount ?? "0").replace(
+        /[^0-9.]/g,
+        "",
+      ),
+    ) || 0;
+  const isCustomAmount = parsedServiceAmount <= 0;
   // Zustand Store Actions
   const toggleCheckbox = useServicesStore((state) => state.toggleCheckbox);
   const incrementQuantity = useServicesStore(
@@ -248,12 +259,18 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
                 {service.title}
               </h3>
 
-              {/* Amount Badge */}
-              <div>
-                <span className="inline-block bg-[#900000] text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-xs">
-                  {currencySymbol}
-                  {Number(service.amount || 0).toFixed(2)}
-                </span>
+              {/* Amount Badge: Fixed ya Flexible */}
+              <div className="mt-1">
+                {isCustomAmount ? (
+                  <span className="inline-block bg-amber-50 text-amber-800 border border-amber-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Flexible Amount
+                  </span>
+                ) : (
+                  <span className="inline-block bg-[#900000] text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-xs">
+                    {currencySymbol}
+                    {parsedServiceAmount.toFixed(2)}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -376,6 +393,31 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
             </div>
           )}
 
+          {/* Custom Amount Input Box */}
+          {isCustomAmount && (
+            <div>
+              <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
+                Offering Amount ({currencySymbol})
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-xs font-bold text-gray-400">
+                  {currencySymbol}
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={customAmountMap[serviceKey] || ""}
+                  onChange={(e) =>
+                    updateCustomAmount(serviceKey, e.target.value)
+                  }
+                  placeholder="Enter custom amount"
+                  className="w-full pl-7 pr-3 py-1.5 text-xs font-semibold text-gray-800 bg-[#F8FAFC] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#900000] focus:bg-white transition-all"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Quantity Stepper */}
           {service.qtyCounterEnabled && (
             <div className="flex items-center justify-between pt-1">
@@ -439,5 +481,3 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
     </div>
   );
 };
-
-
