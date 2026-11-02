@@ -9,19 +9,22 @@
 
 export const APP_COLORS = Object.freeze({
     // Brand Colors
+    // primary: '#00527e',
     primary: '#7E0000',
     primaryDark: '#B45309',
-    secondary: '#FBBF24', 
+    secondary: '#FBBF24',
 
     // Background & Surface
     background: '#FFFFFF',
     surfaceLight: '#FFFBEB',
+    // surfaceDark: '#00527e',
     surfaceDark: '#7E0000',
     surfaceOverlay: 'rgba(0, 0, 0, 0.5)',
 
     // Text Colors
     textPrimary: '#171717',
     textSecondary: '#525252',
+    // textBrandPrimary: '#00527e',
     textBrandPrimary: '#7E0000',
     textInverse: '#FFFFFF',
     textAccentGold: '#FEF3C7',
