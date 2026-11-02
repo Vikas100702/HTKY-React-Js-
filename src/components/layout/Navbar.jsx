@@ -197,7 +197,7 @@ export const Navbar = () => {
 
             {/* Desktop Cart Action Trigger with Reactive Zustand Count */}
             <NavLink
-              to="/donations/general"
+              to="/cart"
               className="flex items-center ml-2 lg:ml-6 pl-2 lg:pl-4 border-l border-white/30 cursor-pointer hover:opacity-80 transition-opacity"
               style={{ color: APP_COLORS.textInverse }}
               aria-label={`Donation Cart containing ${totalCartCount} items`}
@@ -315,7 +315,7 @@ export const Navbar = () => {
 
           {/* Mobile Cart Action Trigger */}
           <NavLink
-            to="/donations/general"
+            to="/cart"
             onClick={() => setIsMobileOpen(false)}
             className="flex items-center justify-between py-2 cursor-pointer hover:opacity-80 border-t border-white/10 mt-2"
             aria-label={`Donation Cart containing ${totalCartCount} items`}
@@ -345,4 +345,3 @@ export const Navbar = () => {
     </nav>
   );
 };
-
