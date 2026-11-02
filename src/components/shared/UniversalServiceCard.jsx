@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useServicesStore } from "../../store/useServicesStore";
 import { useGetDieties } from "../../hooks/queries/Services/useGetDieties";
+import { useCartStore } from "../../store/useCartStore";
 import {
   checkIsServiceGreyScale,
   calculateAvailableDates,
@@ -43,6 +44,15 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const abortControllerRef = useRef(null);
   const isMountedRef = useRef(true);
 
+  const insertItem = useCartStore(
+    (state) => state.insertItem || state.addItem || state.upsertItem,
+  );
+  const removeItemFromCart = useCartStore((state) => state.removeItem);
+  const updateQuantityInCart = useCartStore((state) => state.updateQuantity);
+  const cartItems = useCartStore((state) => state.items || []);
+
+  const isCheckedInCart = cartItems.some((item) => item.id === serviceKey);
+
   // Master Diety list from API
   const { data: masterDieties = [], isLoading: isDietiesLoading } =
     useGetDieties();
@@ -75,6 +85,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       ),
     ) || 0;
   const isCustomAmount = parsedServiceAmount <= 0;
+
   // Zustand Store Actions
   const toggleCheckbox = useServicesStore((state) => state.toggleCheckbox);
   const incrementQuantity = useServicesStore(
@@ -206,11 +217,15 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
 
   const handleCheckboxChange = (e) => {
     const checked = e.target.checked;
+
     if (checked) {
+      // 1. Diety Validation Check
       if (isDietyDropdownVisible && !selectedDiety) {
         showToast("Please select a diety from the dropdown.", "warning");
         return;
       }
+
+      // 2. Date Validation Check (agar date visible hai)
       if (isDTVisible && selectedDates.length === 0) {
         showToast(
           "Please select a date to proceed with this service.",
@@ -218,8 +233,60 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         );
         return;
       }
+
+      // 3. Global Cart Store mein Item Add Karein
+      const finalPrice =
+        parsedServiceAmount > 0
+          ? parsedServiceAmount
+          : parseFloat(customAmountMap[serviceKey] || 0);
+
+      const cartPayload = {
+        id: service.id,
+        title: service.title,
+        refDataName: service.title,
+        amount: finalPrice,
+        quantity: quantity || 1,
+        image: service.imageUrl || "",
+        itemType: "SERVICE",
+        selectedDates: selectedDates || [],
+        selectedTime: selectedTime || "",
+        selectedDiety: selectedDiety || "",
+      };
+
+      if (typeof insertItem === "function") {
+        insertItem(cartPayload);
+      }
+    } else {
+      // Uncheck hone par Global Cart se remove karein
+      if (typeof removeItemFromCart === "function") {
+        removeItemFromCart(serviceKey);
+      }
     }
+
+    // Local state sync
     toggleCheckbox(service, checked);
+  };
+
+  const handleQuantityIncrease = () => {
+    const nextQty = quantity + 1;
+    incrementQuantity(serviceKey);
+    if (
+      (isCheckedInCart || isChecked) &&
+      typeof updateQuantityInCart === "function"
+    ) {
+      updateQuantityInCart(serviceKey, nextQty);
+    }
+  };
+
+  const handleQuantityDecrease = () => {
+    const nextQty = Math.max(1, quantity - 1);
+    decrementQuantity(serviceKey);
+    if (
+      (isCheckedInCart || isChecked) &&
+      typeof updateQuantityInCart === "function"
+    ) {
+      updateQuantityInCart(serviceKey, nextQty);
+    }
   };
 
   const isDatePickerOpen =
@@ -232,7 +299,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col overflow-hidden shadow-xs hover:shadow-md ${
         isGrey
           ? "opacity-60 grayscale pointer-events-none select-none border-gray-200"
-          : isChecked
+          : isCheckedInCart || isChecked
             ? "border-amber-400 ring-2 ring-amber-400/30"
             : "border-gray-200"
       }`}
@@ -278,7 +345,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
             <label className="flex items-center cursor-pointer pt-0.5">
               <input
                 type="checkbox"
-                checked={isChecked}
+                checked={isCheckedInCart || isChecked}
                 onChange={handleCheckboxChange}
                 aria-label={`Select ${service.title}`}
                 className="w-5 h-5 text-[#900000] rounded-md border-gray-300 focus:ring-[#900000] cursor-pointer"
@@ -427,7 +494,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
               <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => decrementQuantity(serviceKey)}
+                  onClick={handleQuantityDecrease}
                   className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
                 >
                   −
@@ -437,7 +504,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => incrementQuantity(serviceKey)}
+                  onClick={handleQuantityIncrease}
                   className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
                 >
                   +
