@@ -4,18 +4,20 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export const useAuthStore = create(
     persist(
         (set) => ({
+            userId: null, // Session id / _id of the user
             isAuthenticated: false,
             token: null,
             user: null,
-            devoteeId: null,
 
             login: (userData) => {
                 if (!userData) return;
+                const extractedId = userData._id;
                 set({
-                    isAuthenticated: true,
+                    userId: extractedId, // Storing _id to track active session
+                    isAuthenticated: Boolean(extractedId),
                     token: userData.token || null,
-                    devoteeId: userData._id || null,
                     user: {
+                        id: extractedId,
                         firstName: userData.firstName || '',
                         lastName: userData.lastName || '',
                         name: userData.refDataName || '',
@@ -34,10 +36,10 @@ export const useAuthStore = create(
 
             logout: () => {
                 set({
+                    userId: null,
                     isAuthenticated: false,
                     token: null,
                     user: null,
-                    devoteeId: null,
                 });
             },
         }),
@@ -45,12 +47,15 @@ export const useAuthStore = create(
             name: 'htky-auth-storage',
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
+                userId: state.userId,
                 isAuthenticated: state.isAuthenticated,
                 token: state.token,
-                devoteeId: state.devoteeId,
                 user: state.user
             }),
         }
     )
 );
+
+
+
 
