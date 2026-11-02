@@ -1,9 +1,3 @@
-/**
- * @file src/hooks/queries/Auth/useSignInController.js
- * @description Enterprise Business Logic Controller for Devotee Authentication.
- * Supports both Email OTP and Firebase Phone OTP login flows.
- */
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -48,7 +42,6 @@ export const useSignInController = () => {
     const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false);
     const [isVerifyingPhoneOtp, setIsVerifyingPhoneOtp] = useState(false);
 
-    // DOM & Memory Resilience: Clean up in-flight requests and recaptcha on unmount
     useEffect(() => {
         return () => {
             if (abortControllerRef.current) {
@@ -79,9 +72,6 @@ export const useSignInController = () => {
         }
     };
 
-    // ------------------------------------------------------------------------
-    // EMAIL OTP FLOW
-    // ------------------------------------------------------------------------
     const handleSendEmailOtp = async (email) => {
         try {
             setError('');
@@ -94,9 +84,30 @@ export const useSignInController = () => {
             }
 
             const signal = createAbortSignal();
+
+            // Check if devotee exists
+            const existRes = await checkExist({
+                credentials: { email: cleanEmail, phone: '' },
+                signal
+            });
+
+            const userExists =
+                (existRes?.statusCode === 1 || existRes?.statusCode === '1') &&
+                Array.isArray(existRes?.data) &&
+                existRes.data.length > 0;
+
+            if (!userExists) {
+                setRegistrationMsg('Account not found. Please register as a new devotee.');
+                return false;
+            }
+
+            // Devotee exists -> Send Email OTP
             const response = await sendEmailOtp({ emailID: cleanEmail, signal });
             const payloadUser = response?.user || response?.data?.user || response?.data;
-            const isSuccess = payloadUser?.statusCode === 1 || payloadUser?.statusCode === '1' || response?.statusCode === 1;
+            const isSuccess =
+                payloadUser?.statusCode === 1 ||
+                payloadUser?.statusCode === '1' ||
+                response?.statusCode === 1;
 
             if (isSuccess) {
                 setOtpTarget(cleanEmail);
@@ -108,7 +119,7 @@ export const useSignInController = () => {
             }
         } catch (err) {
             if (err?.name === 'CanceledError' || err?.name === 'AbortError') return false;
-            setError(err?.response?.data?.message || err?.message || 'Failed to send verification code.');
+            setError(err?.response?.data?.message || err?.message || 'Failed to process request.');
             return false;
         }
     };
@@ -132,6 +143,8 @@ export const useSignInController = () => {
             }
 
             const signal = createAbortSignal();
+
+            // Verify OTP with Backend
             const response = await verifyEmailOtp({
                 emailID: targetEmail,
                 code: cleanCode,
@@ -142,18 +155,31 @@ export const useSignInController = () => {
             const isSuccess = payloadUser?.statusCode === 1 || payloadUser?.statusCode === '1' || response?.statusCode === 1;
 
             if (isSuccess) {
-                const userData = Array.isArray(payloadUser?.data) ? payloadUser.data[0] : payloadUser?.data;
-                const sessionUserData = {
-                    email: targetEmail,
-                    token: payloadUser?.token || 'verified_member_token',
-                    countryCode: '+1',
-                    contryCode: '+1',
-                    ...(userData || {})
-                };
+                const loginRes = await login({
+                    credentials: { email: targetEmail, phone: '' },
+                    signal
+                });
 
-                authLogin(sessionUserData);
-                closeModal();
-                handlePostLoginNavigation(sessionUserData);
+                const userData = loginRes?.data?.[0];
+                if (userData && (loginRes?.statusCode === 1 || loginRes?.statusCode === '1')) {
+                    const sessionUserData = {
+                        ...userData,
+                        _id: userData._id,
+                        email: targetEmail,
+                        token: userData.token || payloadUser?.token || 'verified_member_token',
+                        countryCode: countryCode || userData.contryCode || '+1',
+                        contryCode: countryCode || userData.contryCode || '+1'
+                    };
+
+                    //  Set Authenticated session
+                    authLogin(sessionUserData);
+                    closeModal();
+
+                    // Navigate to Profile or Dashboard
+                    handlePostLoginNavigation(sessionUserData);
+                } else {
+                    setError('Login failed after OTP verification. Please try again.');
+                }
             } else {
                 setError(payloadUser?.message || 'Invalid or expired OTP. Please verify and try again.');
             }
@@ -163,9 +189,6 @@ export const useSignInController = () => {
         }
     };
 
-    // ------------------------------------------------------------------------
-    // PHONE OTP FLOW (FIREBASE)
-    // ------------------------------------------------------------------------
     const handleSendPhoneOtp = async (rawPhone, dialCode = '+1', containerId = 'recaptcha-container') => {
         try {
             setError('');
@@ -179,7 +202,7 @@ export const useSignInController = () => {
                 return false;
             }
 
-            // Check if devotee exists on backend first
+            // Check if devotee exists
             const signal = createAbortSignal();
             const existRes = await checkExist({
                 credentials: { email: '', phone: cleanPhone },
@@ -221,10 +244,10 @@ export const useSignInController = () => {
                 return;
             }
 
-            // 1. Verify OTP with Firebase
+            //  Verify OTP with Firebase
             await confirmPhoneOtp(phoneConfirmationResult, otpCode);
 
-            // 2. Perform backend login to fetch user data
+            // login to fetch user data
             const signal = createAbortSignal();
             const loginRes = await login({
                 credentials: { email: '', phone: otpTarget },
@@ -253,14 +276,11 @@ export const useSignInController = () => {
         }
     };
 
-    // ------------------------------------------------------------------------
-    // UNIFIED ENTRY DISPATCHER
-    // ------------------------------------------------------------------------
     const handleSignInSequence = async (formData) => {
         setError('');
         setRegistrationMsg('');
 
-        // Agar user OTP screen par hai:
+        // If the user is on the OTP screen:
         if (otpChannel === 'email') {
             await handleVerifyEmailOtp(formData.code, formData.email || otpTarget);
             return;
@@ -273,13 +293,13 @@ export const useSignInController = () => {
         const cleanEmail = formData?.email ? String(formData.email).trim() : '';
         const cleanPhone = formData?.phone ? String(formData.phone).replace(/[^0-9]/g, '') : '';
 
-        // Route A: Email entered -> Email OTP
+        // Email entered -> Email OTP
         if (cleanEmail) {
             await handleSendEmailOtp(cleanEmail);
             return;
         }
 
-        // Route B: Phone entered -> Firebase Phone OTP
+        // Phone entered -> Firebase Phone OTP
         if (cleanPhone) {
             await handleSendPhoneOtp(cleanPhone, formData.countryCode || '+1');
             return;
