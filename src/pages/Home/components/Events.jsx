@@ -230,7 +230,10 @@ export const EventsWidget = () => {
               <span className="text-[11px] uppercase font-bold text-gray-500">
                 Date
               </span>
-              <span className="font-bold text-[#800000]">
+              <span
+                className="font-bold"
+                style={{ color: APP_COLORS.textBrandPrimary }}
+              >
                 {panchangamData?.date || ""}
               </span>
             </div>
@@ -238,7 +241,10 @@ export const EventsWidget = () => {
               <span className="text-[11px] uppercase font-bold text-gray-500">
                 Day
               </span>
-              <span className="font-bold text-[#800000]">
+              <span
+                className="font-bold"
+                style={{ color: APP_COLORS.textBrandPrimary }}
+              >
                 {panchangamData?.day || ""}
               </span>
             </div>
