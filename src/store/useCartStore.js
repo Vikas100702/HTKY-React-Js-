@@ -1,154 +1,155 @@
 import { create } from 'zustand';
 
-const logStoreEvent = (action, payload = {}) => {
-    const event = {
-        timestamp: new Date().toISOString(),
-        module: 'HTKY_CART_STORE',
-        action,
-        payload
-    };
-    console.log(`[HTKY_STORE][${action}]`, event);
+const safeParseFloat = (value) => {
+    if (typeof value === 'number') return isNaN(value) ? 0.0 : Math.max(0, value);
+    if (!value) return 0.0;
+    const cleaned = String(value).replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0.0 : Math.max(0, parsed);
 };
 
-const calculateCartTotals = (items) => {
-    if (!Array.isArray(items) || items.length === 0) {
-        return { totalCount: 0, totalAmount: 0 };
-    }
+const calculateCartTotal = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return { totalCount: 0, totalAmount: 0.0 };
 
     return items.reduce(
         (acc, item) => {
-            const quantity = Math.max(parseInt(item.quantity, 10) || 1, 1);
-            const rawPrice = parseFloat(item.amount) || 0;
+            const qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+            const unitPrice = safeParseFloat(item.amount);
 
-            acc.totalCount += quantity;
-            acc.totalAmount += rawPrice * quantity;
+            acc.totalCount += qty;
+            acc.totalAmount += unitPrice * qty;
             return acc;
         },
-        { totalCount: 0, totalAmount: 0 }
+        {
+            totalCount: 0,
+            totalAmount: 0.0
+        }
     );
 };
 
 export const useCartStore = create((set, get) => ({
-    items: [],
+    // CART ENTITY STATE
+    items: [], // Array of CartItem
     totalCount: 0,
-    totalAmount: 0,
+    totalAmount: 0.0,
     currencySymbol: '$',
 
-    setCurrencySymbol: (symbol) => {
-        if (!symbol || typeof symbol !== 'string') return;
-        set({ currencySymbol: symbol });
+    // MODAL & TOAST MUTEX STACKING LOCKS
+    activeModal: null, // null | 'DATE_PICKER' | 'TIME_PICKER' | 'SLOT_MODAL'
+    activeModalItemId: null,
+    activeToast: null, // null | { message: string, type: 'warning'|'error'|'success', timestamp: number }
+
+    acquireModalLock: (modalType, itemId = null) => {
+        const { activeModal } = get();
+        if (activeModal !== null) return false;
+        set({ activeModal: modalType, activeModalItemId: itemId });
+        return true;
     },
 
-    addItem: (itemPayload) => {
+    releaseModalLock: () => {
+        set({ activeModal: null, activeModalItemId: null });
+    },
+
+    showToast: (message, type = 'error') => {
+        const { activeToast } = get();
+        const now = Date.now();
+        if (activeToast && activeToast.message === message && now - activeToast.timestamp < 2000) {
+            return;
+        }
+        set({ activeToast: { message: String(message || ''), type, timestamp: now } });
+    },
+
+    clearToast: () => set({ activeToast: null }),
+
+    setCurrencySymbol: (symbol) => {
+        if (typeof symbol === 'string' && symbol.trim()) {
+            set({ currencySymbol: symbol.trim() });
+        }
+    },
+    
+    insertItem: (itemPayload) => {
         if (!itemPayload || !itemPayload.id) return;
 
         const currentItems = get().items;
-        const existingIndex = currentItems.findIndex((i) => i.id === itemPayload.id);
+        const existingIndex = currentItems.findIndex((item) => item.id === itemPayload.id);
 
-        let updatedItems;
+        const normalizedQuantity = Math.max(1, parseInt(itemPayload.quantity, 10) || 1);
+        const normalizedAmount = safeParseFloat(itemPayload.amount);
+
+        let nextItems;
         if (existingIndex > -1) {
-            updatedItems = currentItems.map((item, idx) => {
+            nextItems = currentItems.map((item, idx) => {
                 if (idx === existingIndex) {
                     return {
                         ...item,
                         ...itemPayload,
-                        quantity: itemPayload.quantity ?? item.quantity ?? 1
+                        amount: normalizedAmount,
+                        quantity: itemPayload.quantity !== undefined ? normalizedQuantity : item.quantity,
                     };
                 }
                 return item;
             });
         } else {
-            updatedItems = [
+            nextItems = [
                 ...currentItems,
                 {
                     ...itemPayload,
-                    quantity: Math.max(parseInt(itemPayload.quantity, 10) || 1, 1)
-                }
+                    amount: normalizedAmount,
+                    quantity: normalizedQuantity,
+                    itemType: itemPayload.itemType || 'SERVICE',
+                },
             ];
         }
 
-        const { totalCount, totalAmount } = calculateCartTotals(updatedItems);
-
-        logStoreEvent('ADD_ITEM', {
-            itemId: itemPayload.id,
-            name: itemPayload.refDataName,
-            totalCount,
-            totalAmount
-        });
-
-        set({
-            items: updatedItems,
-            totalCount,
-            totalAmount
-        });
+        const { totalCount, totalAmount } = calculateCartTotal(nextItems);
+        set({ items: nextItems, totalCount, totalAmount });
     },
+
+    // Backward-compatibility aliases to prevent any component from crashing
+    addItem: (itemPayload) => get().insertItem(itemPayload),
+    upsertItem: (itemPayload) => get().insertItem(itemPayload),
 
     removeItem: (itemId) => {
         if (!itemId) return;
-
         const currentItems = get().items;
-        const updatedItems = currentItems.filter((item) => item.id !== itemId);
-        const { totalCount, totalAmount } = calculateCartTotals(updatedItems);
-
-        logStoreEvent('REMOVE_ITEM', { itemId, totalCount, totalAmount });
-
-        set({
-            items: updatedItems,
-            totalCount,
-            totalAmount
-        });
+        const nextItems = currentItems.filter((item) => item.id !== itemId);
+        const { totalCount, totalAmount } = calculateCartTotal(nextItems);
+        set({ items: nextItems, totalCount, totalAmount });
     },
 
     updateQuantity: (itemId, quantity) => {
         if (!itemId) return;
-        const safeQty = Math.max(parseInt(quantity, 10) || 1, 1);
-
+        const nextQty = Math.max(1, parseInt(quantity, 10) || 1);
         const currentItems = get().items;
-        const updatedItems = currentItems.map((item) => {
+
+        const nextItems = currentItems.map((item) => {
             if (item.id === itemId) {
-                return { ...item, quantity: safeQty };
+                return { ...item, quantity: nextQty };
             }
             return item;
         });
 
-        const { totalCount, totalAmount } = calculateCartTotals(updatedItems);
+        const { totalCount, totalAmount } = calculateCartTotal(nextItems);
+        set({ items: nextItems, totalCount, totalAmount });
+    },
 
-        set({
-            items: updatedItems,
-            totalCount,
-            totalAmount
+    updateCustomAmount: (itemId, amount) => {
+        if (!itemId) return;
+        const parsedAmt = safeParseFloat(amount);
+        const currentItems = get().items;
+
+        const nextItems = currentItems.map((item) => {
+            if (item.id === itemId) {
+                return { ...item, amount: parsedAmt };
+            }
+            return item;
         });
+
+        const { totalCount, totalAmount } = calculateCartTotal(nextItems);
+        set({ items: nextItems, totalCount, totalAmount });
     },
 
     clearCart: () => {
-        logStoreEvent('CLEAR_CART');
-        set({
-            items: [],
-            totalCount: 0,
-            totalAmount: 0
-        });
+        set({ items: [], totalCount: 0, totalAmount: 0.0 });
     },
-
-    activeModalLock: null,
-
-    acquireModalLock: (modalId) => {
-        const currentLock = get().activeModalLock;
-        if (currentLock && currentLock !== modalId) {
-            logStoreEvent('MUTEX_LOCK_BLOCKED', { requested: modalId, heldBy: currentLock });
-            return false;
-        }
-
-        set({ activeModalLock: modalId });
-        logStoreEvent('MUTEX_LOCK_ACQUIRED', { modalId });
-        return true;
-    },
-
-    releaseModalLock: (modalId) => {
-        const currentLock = get().activeModalLock;
-        if (currentLock === modalId) {
-            set({ activeModalLock: null });
-            logStoreEvent('MUTEX_LOCK_RELEASED', { modalId });
-        }
-    }
 }));
-
