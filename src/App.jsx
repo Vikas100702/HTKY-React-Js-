@@ -108,6 +108,7 @@ const NotFoundFallback = () => (
   </div>
 );
 
+// LAZY LOADED ROUTE IMPORTS
 const HomePage = lazy(() =>
   import("./pages/Home").catch(() => ({
     default: () => <div>Home Module Failed to Load</div>,
@@ -117,39 +118,51 @@ const HomePage = lazy(() =>
 const DashboardPage = lazy(() =>
   import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
+
 const UserProfilePage = lazy(() =>
   import("./pages/Auth/UserProfile").then((m) => ({ default: m.UserProfile })),
 );
 
-// Donations Section Lazy Imports
 const ServicesPage = lazy(() =>
   import("./pages/Services/Services").then((m) => ({
     default: m.Services,
   })),
 );
 
-// Calendar Section Lazy Imports
 const CalendarPage = lazy(() =>
   import("./pages/Calendar/CalendarPage").then((m) => ({
     default: m.CalendarPage,
   })),
 );
 
-// Donations Section Lazy Imports
+// General Donation Page
 const GeneralDonationPage = lazy(() =>
   import("./pages/Donations/GeneralDonation").then((m) => ({
     default: m.GeneralDonation,
   })),
 );
 
-// Education Section Lazy Imports
+// Cart & Checkout Pages
+const CartPage = lazy(() =>
+  import("./pages/Cart/Cart").then((m) => ({
+    default: m.CartPage,
+  })),
+);
+
+const CheckoutPage = lazy(() =>
+  import("./pages/Checkout/Checkout").then((m) => ({
+    default: m.Checkout,
+  })),
+);
+
+// Education Section
 const AllClassesPage = lazy(() =>
   import("./pages/Education/AllClasses").then((m) => ({
     default: m.AllClasses,
   })),
 );
 
-// Seva Section Lazy Imports
+// Seva Section
 const VolunteerSignupPage = lazy(() =>
   import("./pages/Seva/VolunteerSignUp").then((m) => ({
     default: m.VolunteerSignUp,
@@ -174,7 +187,7 @@ const LostFoundPage = lazy(() =>
   })),
 );
 
-// About Section Lazy Imports
+// About Section
 const AboutTemplePage = lazy(() =>
   import("./pages/About/AboutTemple").then((m) => ({ default: m.AboutTemple })),
 );
@@ -217,6 +230,7 @@ const AboutShirdiSaiSatsangPage = lazy(() =>
   })),
 );
 
+// ROUTER CONFIGURATION
 const router = createBrowserRouter([
   {
     path: "/",
@@ -231,6 +245,8 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      // General Donation Page Route
       {
         path: "donations/general",
         element: (
@@ -239,15 +255,42 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      // Cart Page Route
       {
-        path: "donations",
-        element: <Navigate to="/donations/general" replace />,
+        path: "/cart",
+        element: (
+          <Suspense fallback={<RouteSuspenseFallback />}>
+            <CartPage />
+          </Suspense>
+        ),
+      },
+
+      // 3. Checkout Page Route (Cart & common checkout tap se yahan aayega)
+      {
+        path: "checkout",
+        element: (
+          <Suspense fallback={<RouteSuspenseFallback />}>
+            <CheckoutPage />
+          </Suspense>
+        ),
+      },
+
+      // Services Route
+      {
+        path: "services",
+        element: (
+          <Suspense fallback={<RouteSuspenseFallback />}>
+            <ServicesPage />
+          </Suspense>
+        ),
       },
       {
-        path: "general-donation",
-        element: <Navigate to="/donations/general" replace />,
+        path: "book-service",
+        element: <Navigate to="/services" replace />,
       },
-      // Protected Routes requiring Authentication via AuthGuard
+
+      // Protected Dashboard & Profile
       {
         path: "dashboard",
         element: (
@@ -258,20 +301,18 @@ const router = createBrowserRouter([
           </AuthGuard>
         ),
       },
-
-      // Services Section Routes
       {
-        path: "book-service",
+        path: "profile",
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
-              <ServicesPage />
+              <UserProfilePage />
             </Suspense>
           </AuthGuard>
         ),
       },
 
-      // Calendar Section Routes
+      // Calendar
       {
         path: "calendar",
         element: (
@@ -283,19 +324,7 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Donations Section Routes
-      {
-        path: "donations/general",
-        element: (
-          <AuthGuard>
-            <Suspense fallback={<RouteSuspenseFallback />}>
-              <GeneralDonationPage />
-            </Suspense>
-          </AuthGuard>
-        ),
-      },
-
-      // Education Section Routes
+      // Education
       {
         path: "all-classes",
         element: (
@@ -307,7 +336,7 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Seva Section Routes
+      // Seva
       {
         path: "volunteer-signup",
         element: (
@@ -349,7 +378,7 @@ const router = createBrowserRouter([
         ),
       },
 
-      // About Section Routes
+      // About Section
       {
         path: "about-temple",
         element: (
@@ -430,16 +459,8 @@ const router = createBrowserRouter([
           </AuthGuard>
         ),
       },
-      {
-        path: "profile",
-        element: (
-          <AuthGuard>
-            <Suspense fallback={<RouteSuspenseFallback />}>
-              <UserProfilePage />
-            </Suspense>
-          </AuthGuard>
-        ),
-      },
+
+      // 404 Fallback
       {
         path: "*",
         element: <NotFoundFallback />,
