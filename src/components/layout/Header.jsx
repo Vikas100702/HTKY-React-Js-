@@ -1,9 +1,10 @@
 import { useGetHeaderSettings } from "../../hooks/queries/useGetHeaderSettings";
 import { useModalStore } from "../../store/useModalStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import { APP_COLORS } from "../../constants/appColors";
 import { APP_STRINGS } from "../../constants/appStrings";
 import { APP_FONTS } from "../../constants/appTheme";
-import { Phone, Mail } from "lucide-react";
+import { Phone, Mail, LogOut } from "lucide-react";
 
 export const Header = () => {
   const {
@@ -13,6 +14,12 @@ export const Header = () => {
   } = useGetHeaderSettings();
 
   const openModal = useModalStore((state) => state.openModal);
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    window.location.reload();
+  };
 
   if (isHeaderLoading) {
     return (
@@ -53,12 +60,8 @@ export const Header = () => {
             <img
               src={headerData.logoUrl}
               alt={`${headerData.templeName} Logo`}
-              className="h-20 w-20 sm:h-24 sm:w-24 md:h-48 md:w-48 xl:max-h-[20rem] xl:max-w-[20rem] object-contain p-0.5"
+              className="h-15 w-15 sm:h-24 sm:w-24 md:h-48 md:w-48 xl:max-h-[8rem] xl:max-w-[8rem] object-contain p-0.5"
               loading="lazy"
-              // style={{
-              //   filter:
-              //     "brightness(0) saturate(100%) invert(22%) sepia(82%) saturate(2132%) hue-rotate(178deg) brightness(92%) contrast(106%)",
-              // }}
             />
           ) : (
             <div className="h-20 w-20 sm:h-24 sm:w-24 bg-gray-100 rounded-full flex items-center justify-center">
@@ -70,9 +73,9 @@ export const Header = () => {
         </div>
 
         {/* Temple Name: Center on Mobile, Center on Desktop (Takes up remaining space safely) */}
-        <div className="flex flex-col items-center xl:items-center justify-center xl:flex-grow px-2 text-center">
+        <div className="flex flex-col items-center xl:items-center justify-center xl:flex-grow text-center">
           <h1
-            className="text-2xl sm:text-3xl md:text-4xl xl:text-4xl font-bold tracking-wider uppercase leading-tight mb-1"
+            className="text-2xl sm:text-3xl md:text-4xl xl:text-3xl font-bold uppercase leading-tight"
             style={{
               color: APP_COLORS.primary,
               fontFamily: APP_FONTS.heading,
@@ -82,7 +85,7 @@ export const Header = () => {
           </h1>
 
           <h2
-            className="text-sm sm:text-base md:text-lg xl:text-xl font-bold tracking-wider leading-tight mb-2"
+            className="text-sm sm:text-base md:text-lg xl:text-lg font-bold tracking-wider leading-tight"
             style={{
               color: APP_COLORS.primary,
               fontFamily: APP_FONTS.heading,
@@ -92,7 +95,7 @@ export const Header = () => {
           </h2>
 
           <h2
-            className="flex flex-col sm:flex-row flex-wrap items-center font-bold justify-center gap-x-6 gap-y-2 text-sm sm:text-base md:text-lg xl:text-xl tracking-wider leading-tight mb-2"
+            className="flex flex-col sm:flex-row flex-wrap items-center font-bold justify-center gap-x-4 gap-y-2 text-sm sm:text-base md:text-lg xl:text-lg tracking-wider"
             style={{
               color: APP_COLORS.primary,
               fontFamily: APP_FONTS.heading,
@@ -115,7 +118,7 @@ export const Header = () => {
 
           {headerData.subHeading3 && (
             <h2
-              className="text-sm sm:text-base md:text-lg xl:text-xl font-bold tracking-wider leading-relaxed mt-2 max-w-4xl"
+              className="text-sm sm:text-base md:text-lg xl:text-lg font-bold tracking-wider leading-relaxed mt-2 max-w-4xl"
               style={{
                 color: APP_COLORS.primary,
                 fontFamily: APP_FONTS.heading,
@@ -127,18 +130,43 @@ export const Header = () => {
         </div>
       </div>
 
-      {/* Button: Center on Mobile, Right on Desktop (w-1/4 to perfectly balance the left side) */}
+      {/* Button / User Session Widget: Center on Mobile, Right on Desktop */}
       <div className="flex flex-col items-center xl:items-end justify-center w-full xl:w-[18%] mt-2 xl:mt-0">
         <div className="flex flex-row justify-center w-full max-w-sm xl:max-w-none">
-          <button
-            className="text-white px-4 py-3 md:px-8 md:py-2 text-sm md:text-base font-bold tracking-wide hover:opacity-90 transition-opacity w-full xl:w-auto rounded-sm"
-            style={{ backgroundColor: APP_COLORS.primary }}
-            onClick={() =>
-              openModal("SIGN_IN", { logoUrl: headerData?.logoUrl })
-            }
-          >
-            {APP_STRINGS.btnSignIn}
-          </button>
+          {isAuthenticated ? (
+            <div
+              className="flex items-center gap-2 bg-white/90 border border-yellow-600/30 py-1.5 px-3 rounded-md shadow-md"
+              style={{ backgroundColor: APP_COLORS.primary }}
+            >
+              <span
+                className="text-xs md:text-sm font-bold tracking-wide uppercase"
+                style={{ color: APP_COLORS.background }}
+              >
+                Welcome, {user?.firstName || user?.name || "Devotee"}
+              </span>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                className="ml-1 p-1 text-gray-600 hover:text-red-600 rounded transition-all cursor-pointer"
+                aria-label="Logout"
+              >
+                <LogOut
+                  className="w-4 h-4"
+                  style={{ color: APP_COLORS.background }}
+                />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="text-white px-4 py-3 md:px-8 md:py-2 text-sm md:text-base font-bold tracking-wide transition-opacity w-full xl:w-auto rounded-sm cursor-pointer"
+              style={{ backgroundColor: APP_COLORS.primary }}
+              onClick={() =>
+                openModal("SIGN_IN", { logoUrl: headerData?.logoUrl })
+              }
+            >
+              {APP_STRINGS.btnSignIn}
+            </button>
+          )}
         </div>
       </div>
     </header>
