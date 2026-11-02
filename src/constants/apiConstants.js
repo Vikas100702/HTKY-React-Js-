@@ -25,5 +25,7 @@ export const ENDPOINTS = Object.freeze({
     CUSTOMER_LOGIN: '/api/customerDetails/customerLoginWeb',
     SEND_EMAIL_CODE: '/api/auth/sendMemberAuthCode',
     VERIFY_EMAIL_CODE: '/api/auth/verifyMemberCode',
-    SERVICE_AVAILABILITY: '/api/service-availability'
+    SERVICE_AVAILABILITY: '/api/service-availability',
+    ADD_CUSTOMER_DETAIL: '/api/customerDetails/addCustomerDetailWeb',
+    GET_COMPANY_DETAILS: '/api/auth/getCompanyDetails'
 });
