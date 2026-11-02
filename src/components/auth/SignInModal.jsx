@@ -7,9 +7,11 @@ import {
   ArrowLeft,
   RefreshCw,
   Mail,
+  Phone,
 } from "lucide-react";
 import { PhoneInputField } from "../ui/PhoneInputField";
 import { useSignInController } from "../../hooks/queries/Auth/useSignInController";
+import { useModalStore } from "../../store/useModalStore";
 
 const SignInModalContent = ({ onClose, logoUrl }) => {
   const [phone, setPhone] = useState("");
@@ -26,13 +28,17 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
   const isEmailDead = activeField === "phone";
   const isPhoneDead = activeField === "email";
 
+  const openModal = useModalStore((state) => state.openModal);
+
   const {
     handleSignInSequence,
-    handleSendOtp,
-    handleVerifyOtp,
+    handleSendEmailOtp,
+    handleVerifyEmailOtp,
+    handleVerifyPhoneOtp,
     resetOtpFlow,
-    isEmailOtpSent,
-    otpEmail,
+    otpChannel,
+    isOtpSent,
+    otpTarget,
     isLoading,
     isSendingOtp,
     isVerifyingOtp,
@@ -45,15 +51,21 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
     onClose?.();
   }, [isLoading, onClose]);
 
-  // OTP input
+  const handleSwitchToRegister = (e) => {
+    e.preventDefault();
+    if (isLoading) return;
+    handleClose();
+    openModal("REGISTER", { logoUrl });
+  };
+
   useEffect(() => {
-    if (isEmailOtpSent) {
+    if (isOtpSent) {
       const timer = setTimeout(() => {
         otpInputRef.current?.focus();
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [isEmailOtpSent]);
+  }, [isOtpSent]);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -116,8 +128,12 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
     e.preventDefault();
     if (isLoading) return;
 
-    if (isEmailOtpSent) {
-      await handleVerifyOtp(otpCode, otpEmail || email);
+    if (isOtpSent) {
+      if (otpChannel === "email") {
+        await handleVerifyEmailOtp(otpCode, otpTarget || email);
+      } else if (otpChannel === "phone") {
+        await handleVerifyPhoneOtp(otpCode);
+      }
       return;
     }
 
@@ -130,12 +146,14 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
   };
 
   const handleResendOtp = async () => {
-    if (isLoading || !otpEmail) return;
+    if (isLoading || !otpTarget) return;
     setOtpCode("");
-    await handleSendOtp(otpEmail);
+    if (otpChannel === "email") {
+      await handleSendEmailOtp(otpTarget);
+    }
   };
 
-  const handleChangeEmail = () => {
+  const handleChangeTarget = () => {
     if (isLoading) return;
     setOtpCode("");
     resetOtpFlow?.();
@@ -148,7 +166,6 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
       aria-modal="true"
       aria-labelledby="signin-modal-title"
     >
-      {/* Backdrop Dismissal */}
       <div
         className="fixed inset-0 cursor-pointer"
         onClick={handleClose}
@@ -156,7 +173,6 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
       />
 
       <div className="relative z-10 w-full max-w-[400px] bg-white bg-[url('/src/assets/bg-card.png')] bg-cover bg-center shadow-2xl animate-in zoom-in-95 duration-200 rounded-md border border-gray-200">
-        {/* Close Button */}
         <button
           onClick={handleClose}
           type="button"
@@ -168,7 +184,6 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
         </button>
 
         <div className="p-8 flex flex-col items-center">
-          {/* Logo */}
           {logoUrl ? (
             <img
               src={logoUrl}
@@ -184,16 +199,14 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
             </div>
           )}
 
-          {/* Dynamic Header */}
           <h2
             id="signin-modal-title"
             className="text-[#900000] text-lg font-black font-sans uppercase tracking-widest mt-1 mb-1"
           >
-            {isEmailOtpSent ? "VERIFY OTP" : "SIGN IN"}
+            {isOtpSent ? "VERIFY OTP" : "SIGN IN"}
           </h2>
           <div className="w-24 h-[1px] bg-amber-400 mb-4" />
 
-          {/* Error Banner */}
           {error && (
             <div className="w-full flex items-start gap-2 bg-red-50 text-red-700 p-3 rounded-md border border-red-100 mb-4 animate-in slide-in-from-top-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -201,18 +214,18 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
             </div>
           )}
 
-          {/* Account Not Found Banner */}
           {registrationMsg && (
             <div className="w-full flex items-start gap-2 bg-blue-50 text-blue-800 p-3 rounded-md border border-blue-100 mb-4 animate-in slide-in-from-top-2">
               <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div className="text-xs font-medium leading-tight">
                 {registrationMsg}
-                <a
-                  href="/register"
-                  className="block mt-1.5 font-bold underline hover:text-blue-900 transition-colors"
+                <button
+                  type="button"
+                  onClick={handleSwitchToRegister}
+                  className="block mt-1.5 font-bold underline hover:text-blue-900 transition-colors cursor-pointer text-left"
                 >
                   Click here to Register
-                </a>
+                </button>
               </div>
             </div>
           )}
@@ -221,7 +234,6 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
             className="w-full flex flex-col items-center"
             onSubmit={handleFormSubmit}
           >
-            {/* Devotee Role Badge */}
             <button
               type="button"
               tabIndex={-1}
@@ -230,17 +242,20 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
               Devotee
             </button>
 
-            {/* OTP VERIFICATION VIEW */}
-            {isEmailOtpSent ? (
+            {isOtpSent ? (
               <div className="w-full flex flex-col items-center animate-in fade-in duration-200">
                 <div className="w-full flex items-center justify-between text-xs text-gray-600 mb-2 px-1">
                   <span className="flex items-center gap-1 font-medium truncate max-w-[240px]">
-                    <Mail className="w-3.5 h-3.5 text-[#900000] shrink-0" />
-                    {otpEmail}
+                    {otpChannel === "email" ? (
+                      <Mail className="w-3.5 h-3.5 text-[#900000] shrink-0" />
+                    ) : (
+                      <Phone className="w-3.5 h-3.5 text-[#900000] shrink-0" />
+                    )}
+                    {otpTarget}
                   </span>
                   <button
                     type="button"
-                    onClick={handleChangeEmail}
+                    onClick={handleChangeTarget}
                     disabled={isLoading}
                     className="text-[#900000] font-bold hover:underline ml-2 shrink-0 disabled:opacity-50"
                   >
@@ -248,7 +263,6 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
                   </button>
                 </div>
 
-                {/* OTP Input */}
                 <input
                   ref={otpInputRef}
                   type="text"
@@ -264,26 +278,26 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
                   className="w-full border border-gray-300 rounded px-3 py-2.5 text-center text-lg tracking-[0.3em] font-semibold text-gray-800 placeholder-gray-400 placeholder:tracking-normal placeholder:font-normal placeholder:text-sm focus:outline-none focus:border-[#900000] focus:ring-1 focus:ring-[#900000] transition-colors mb-3 bg-white/95 disabled:bg-gray-100 disabled:opacity-70"
                 />
 
-                {/* Resend Code */}
-                <div className="w-full flex justify-end mb-6 px-1">
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={isLoading}
-                    className="flex items-center gap-1 text-xs text-[#900000] font-semibold hover:underline disabled:opacity-50"
-                  >
-                    <RefreshCw
-                      className={`w-3 h-3 ${isSendingOtp ? "animate-spin" : ""}`}
-                    />
-                    Resend Code
-                  </button>
-                </div>
+                {otpChannel === "email" && (
+                  <div className="w-full flex justify-end mb-6 px-1">
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={isLoading}
+                      className="flex items-center gap-1 text-xs text-[#900000] font-semibold hover:underline disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3 h-3 ${isSendingOtp ? "animate-spin" : ""}`}
+                      />
+                      Resend Code
+                    </button>
+                  </div>
+                )}
 
-                {/* Verification Submission Button */}
                 <button
                   type="submit"
                   disabled={isLoading || otpCode.trim().length < 4}
-                  className="relative flex items-center justify-center bg-[#900000] hover:bg-[#7a0000] text-white text-[15px] font-semibold py-2 px-8 rounded-md shadow-md transition-all mb-4 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#900000] disabled:bg-[#7a0000] disabled:opacity-60 disabled:cursor-not-allowed w-44 h-10"
+                  className="relative flex items-center justify-center bg-[#900000] hover:bg-[#7a0000] text-white text-[15px] font-semibold py-2 px-8 rounded-md shadow-md transition-all mb-4 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#900000] disabled:bg-[#7a0000] disabled:opacity-60 disabled:cursor-not-allowed w-44 h-10 cursor-pointer"
                 >
                   {isVerifyingOtp ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -292,21 +306,18 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
                   )}
                 </button>
 
-                {/* Back to Email Selection */}
                 <button
                   type="button"
-                  onClick={handleChangeEmail}
+                  onClick={handleChangeTarget}
                   disabled={isLoading}
-                  className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors mb-2 disabled:opacity-50"
+                  className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors mb-2 disabled:opacity-50 cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Back to Sign In options
                 </button>
               </div>
             ) : (
-              /* CREDENTIALS VIEW */
               <>
-                {/* Email Field Wrapper */}
                 <div
                   onClick={handleEmailTap}
                   className={`w-full mb-4 transition-opacity duration-200 ${
@@ -333,7 +344,6 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
                   </span>
                 </div>
 
-                {/* Phone Field Wrapper */}
                 <div
                   ref={phoneContainerRef}
                   onClick={handlePhoneTap}
@@ -356,7 +366,7 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="relative flex items-center justify-center bg-[#900000] hover:bg-[#7a0000] text-white text-[15px] font-semibold py-2 px-12 rounded-md shadow-md transition-all mb-6 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#900000] disabled:bg-[#7a0000] disabled:cursor-not-allowed w-40 h-10"
+                  className="relative flex items-center justify-center bg-[#900000] hover:bg-[#7a0000] text-white text-[15px] font-semibold py-2 px-12 rounded-md shadow-md transition-all mb-6 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#900000] disabled:bg-[#7a0000] disabled:cursor-not-allowed w-40 h-10 cursor-pointer"
                 >
                   {isSendingOtp || isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -367,12 +377,13 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
 
                 <p className="text-[14px] text-gray-900 font-medium">
                   New User?{" "}
-                  <a
-                    href="/register"
-                    className="text-[#900000] font-bold hover:underline transition-all ml-1"
+                  <button
+                    type="button"
+                    onClick={handleSwitchToRegister}
+                    className="text-[#900000] font-bold hover:underline transition-all ml-1 cursor-pointer"
                   >
                     Register
-                  </a>
+                  </button>
                 </p>
               </>
             )}
@@ -387,3 +398,5 @@ export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
   if (!isOpen) return null;
   return <SignInModalContent onClose={onClose} logoUrl={logoUrl} />;
 };
+
+
