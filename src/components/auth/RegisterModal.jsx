@@ -32,7 +32,8 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
     isLoading,
     error,
     successMessage,
-    companyNotFoundMsg,
+    companyEmailError,
+    companyPhoneError,
   } = useRegisterController();
 
   const openModal = useModalStore((state) => state.openModal);
@@ -173,7 +174,6 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter Email"
-                    required
                     className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#900000] bg-white/95"
                   />
                 </div>
@@ -188,7 +188,6 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Enter First Name"
-                      required
                       className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#900000] bg-white/95"
                     />
                   </div>
@@ -201,7 +200,6 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Enter Last Name"
-                      required
                       className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#900000] bg-white/95"
                     />
                   </div>
@@ -238,19 +236,18 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
               <div className="space-y-4 mt-4 pt-4 border-t border-gray-200 animate-in fade-in duration-200">
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Company Email*
+                    Company Email
                   </label>
                   <input
                     type="email"
                     value={companyEmail}
                     onChange={(e) => setCompanyEmail(e.target.value)}
                     placeholder="Enter Company Email"
-                    required
                     className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#900000] bg-white/95"
                   />
-                  {companyNotFoundMsg && (
+                  {companyEmailError && (
                     <p className="text-xs text-amber-600 mt-1 font-medium">
-                      {companyNotFoundMsg}
+                      {companyEmailError}
                     </p>
                   )}
                 </div>
@@ -258,27 +255,25 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                      Company First Name*
+                      Company First Name
                     </label>
                     <input
                       type="text"
                       value={companyFirstName}
                       onChange={(e) => setCompanyFirstName(e.target.value)}
                       placeholder="Company First Name"
-                      required
                       className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#900000] bg-white/95"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                      Company Last Name*
+                      Company Last Name
                     </label>
                     <input
                       type="text"
                       value={companyLastName}
                       onChange={(e) => setCompanyLastName(e.target.value)}
                       placeholder="Company Last Name"
-                      required
                       className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#900000] bg-white/95"
                     />
                   </div>
@@ -286,7 +281,7 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
 
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Company Phone Number*
+                    Company Phone Number
                   </label>
                   <PhoneInputField
                     name="companyPhone"
@@ -294,6 +289,11 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
                     onChange={(e) => setCompanyPhone(e.target.value)}
                     onCountryChange={(code) => setCompanyCountryCode(code)}
                   />
+                  {companyPhoneError && (
+                    <p className="text-xs text-amber-600 mt-1 font-medium">
+                      {companyPhoneError}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -333,5 +333,3 @@ export const RegisterModal = ({ isOpen, onClose, logoUrl }) => {
   if (!isOpen) return null;
   return <RegisterModalContent onClose={onClose} logoUrl={logoUrl} />;
 };
-
-
