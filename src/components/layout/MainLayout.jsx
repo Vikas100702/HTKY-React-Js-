@@ -4,6 +4,7 @@ import { Header } from "./Header";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer/Footer";
 import { SignInModal } from "../auth/SignInModal";
+import { RegisterModal } from "../auth/RegisterModal";
 import { useModalStore } from "../../store/useModalStore";
 import { APP_COLORS } from "../../constants/appColors";
 import { APP_STRINGS } from "../../constants/appStrings";
@@ -160,11 +161,18 @@ export const MainLayout = () => {
 
       <Footer />
 
+      {/* Global Authentication Modals */}
       <SignInModal
         isOpen={activeModal === "SIGN_IN"}
         onClose={closeModal}
         logoUrl={modalPayload?.logoUrl}
         onSubmit={handleSignInSubmit}
+      />
+
+      <RegisterModal
+        isOpen={activeModal === "REGISTER"}
+        onClose={closeModal}
+        logoUrl={modalPayload?.logoUrl}
       />
     </div>
   );
