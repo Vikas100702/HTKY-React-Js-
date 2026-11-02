@@ -1,5 +1,6 @@
 import { useGeneralDonation } from "./hooks/useGeneralDonation";
 import { DonationSlotModal } from "./Components/DonationSlotModal";
+import { CommonCartFooter } from "../../components/shared/CommonCartFooter";
 import { ENV_CONFIG } from "../../config/envConfig";
 import { APP_COLORS } from "../../constants/appColors";
 
@@ -32,9 +33,7 @@ export const GeneralDonation = () => {
     isLoading,
     hasError,
     searchQuery,
-    currencySymbol,
-    totalCartCount,
-    totalCartAmount,
+      currencySymbol,
     checkedCategoryMap,
     categoryQuantitiesMap,
     customAmountMap,
@@ -61,7 +60,6 @@ export const GeneralDonation = () => {
     handleOpenTimePicker,
     handleCloseTimePicker,
     handleSelectTime,
-    handleCheckoutClick,
   } = actions;
 
   const {
@@ -134,7 +132,7 @@ export const GeneralDonation = () => {
           </div>
         </div>
       )}
-    
+
       {/* 3. CATEGORY NAVIGATION TABS */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto py-3 no-scrollbar">
@@ -157,7 +155,7 @@ export const GeneralDonation = () => {
           })}
         </div>
       </div>
-      
+
       {/* 4. CONTROLS BAR: FULL WIDTH SEARCH BAR */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2">
         <div className="w-full pb-6 border-b border-gray-200">
@@ -206,7 +204,7 @@ export const GeneralDonation = () => {
           </div>
         </div>
       </div>
-      
+
       {/* 5. CONTENT GRID / SKELETON / EMPTY / CARDS */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {isLoading ? (
@@ -492,42 +490,10 @@ export const GeneralDonation = () => {
         )}
       </main>
 
-      
       {/* 6. PERSISTENT AGGREGATED CHECKOUT BAR                                */}
-      
-      <footer className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl py-3.5 px-4 sm:px-8 z-40">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-900 font-bold text-sm">
-              {totalCartCount}
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                Total Offering
-              </p>
-              <p className="text-lg sm:text-2xl font-serif font-bold text-gray-900 leading-tight">
-                {currencySymbol}
-                {totalCartAmount.toFixed(2)}
-              </p>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleCheckoutClick}
-            disabled={totalCartCount === 0}
-            className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-200 shadow-sm cursor-pointer ${
-              totalCartCount > 0
-                ? "bg-[#900000] text-amber-300 hover:bg-[#7a0000] active:scale-95 shadow-amber-900/10"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            Proceed to Checkout
-          </button>
-        </div>
-      </footer>
+      <CommonCartFooter checkoutPath="/checkout" />
 
-      
       {/* 7. MODAL DIALOGS CONTAINER */}
       <DonationSlotModal
         dateModal={dateModal}
@@ -537,9 +503,8 @@ export const GeneralDonation = () => {
         onCloseTime={handleCloseTimePicker}
         onSelectTime={handleSelectTime}
         getRemainingSlots={getRemainingSlots}
-        primaryColor = {APP_COLORS.primary}
+        primaryColor={APP_COLORS.primary}
       />
     </section>
   );
 };
-
