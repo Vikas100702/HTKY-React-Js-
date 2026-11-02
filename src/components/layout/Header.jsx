@@ -45,13 +45,20 @@ export const Header = () => {
       */}
       <div className="flex flex-col xl:flex-row items-center justify-center space-y-3 xl:space-y-0 w-full xl:contents mb-4 xl:mb-0 text-center">
         {/* Logo: Center on Mobile, Left on Desktop (w-1/4 to perfectly balance the right side) */}
-        <div className="flex-shrink-0 flex justify-center w-full xl:w-[18%]">
+        <div
+          className="flex-shrink-0 flex justify-center w-full xl:w-[18%]"
+          style={{ color: APP_COLORS.primary }}
+        >
           {headerData.logoUrl ? (
             <img
               src={headerData.logoUrl}
               alt={`${headerData.templeName} Logo`}
               className="h-20 w-20 sm:h-24 sm:w-24 md:h-48 md:w-48 xl:max-h-[20rem] xl:max-w-[20rem] object-contain p-0.5"
               loading="lazy"
+              // style={{
+              //   filter:
+              //     "brightness(0) saturate(100%) invert(22%) sepia(82%) saturate(2132%) hue-rotate(178deg) brightness(92%) contrast(106%)",
+              // }}
             />
           ) : (
             <div className="h-20 w-20 sm:h-24 sm:w-24 bg-gray-100 rounded-full flex items-center justify-center">
