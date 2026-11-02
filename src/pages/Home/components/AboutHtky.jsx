@@ -1,8 +1,3 @@
-/**
- * @file src/components/AboutHtky/AboutHtky.jsx
- * @description Ultra-wide adaptive About section.
- */
-
 import { useNavigate } from "react-router-dom";
 import { useGetAboutHtky } from "../../../hooks/queries/Home/useAboutHtky";
 
