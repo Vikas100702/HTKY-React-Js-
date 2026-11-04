@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 import { useGetNavMenu } from "../../hooks/queries/useGetNavMenu";
 import { APP_COLORS } from "../../constants/appColors";
 import { APP_FONTS } from "../../constants/appTheme";
 import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "../../store/useCartStore";
+import { useAuthStore } from "../../store/useAuthStore";
+import { useModalStore } from "../../store/useModalStore";
 
 const resolveSafePath = (item) => {
   if (!item) return "/";
@@ -30,13 +33,23 @@ const resolveSafePath = (item) => {
 };
 
 export const Navbar = () => {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const openModal = useModalStore((state) => state.openModal);
+
+  // On cart click, open the sign-in modal if the user is not signed in; otherwise, navigate to checkout.
+  const handleCartClick = () => {
+    if (!isAuthenticated) {
+      openModal("SIGN_IN");
+      return;
+    }
+    navigate("/checkout");
+  };
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState(null);
-
-  // Reactive Cart Badge Subscription (Atomic Selector)
   const totalCartCount = useCartStore((state) => state.totalCount);
 
-  // Dynamic Menu Query
   const { data: navItems, isLoading } = useGetNavMenu();
 
   const toggleMobileDropdown = (id) => {
@@ -196,9 +209,10 @@ export const Navbar = () => {
             })}
 
             {/* Desktop Cart Action Trigger with Reactive Zustand Count */}
-            <NavLink
-              to="/cart"
-              className="flex items-center ml-2 lg:ml-6 pl-2 lg:pl-4 border-l border-white/30 cursor-pointer hover:opacity-80 transition-opacity"
+            <button
+              type="button"
+              onClick={handleCartClick}
+              className="flex items-center ml-2 lg:ml-6 pl-2 lg:pl-4 border-l border-white/30 cursor-pointer hover:opacity-80 transition-opacity bg-transparent border-t-0 border-r-0 border-b-0"
               style={{ color: APP_COLORS.textInverse }}
               aria-label={`Donation Cart containing ${totalCartCount} items`}
             >
@@ -209,7 +223,7 @@ export const Navbar = () => {
               <span className="ml-1.5 text-lg lg:text-xl font-bold">
                 {totalCartCount}
               </span>
-            </NavLink>
+            </button>
           </div>
         </div>
       </div>
@@ -279,7 +293,7 @@ export const Navbar = () => {
                   )}
                 </div>
 
-                {/* Mobile Submenu Accordion */}
+                {/* Mobile Submenu */}
                 {hasSubMenu && isSubMenuOpen && (
                   <div className="pl-4 pb-2 space-y-1 bg-black/20 rounded my-1">
                     {item.subMenu.map((sub) => {
@@ -314,10 +328,13 @@ export const Navbar = () => {
           })}
 
           {/* Mobile Cart Action Trigger */}
-          <NavLink
-            to="/cart"
-            onClick={() => setIsMobileOpen(false)}
-            className="flex items-center justify-between py-2 cursor-pointer hover:opacity-80 border-t border-white/10 mt-2"
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileOpen(false);
+              handleCartClick();
+            }}
+            className="w-full flex items-center justify-between py-2 cursor-pointer hover:opacity-80 border-t border-white/10 mt-2 bg-transparent border-r-0 border-b-0 border-l-0 text-left"
             aria-label={`Donation Cart containing ${totalCartCount} items`}
           >
             <div className="flex items-center space-x-2">
@@ -339,7 +356,7 @@ export const Navbar = () => {
             >
               {totalCartCount}
             </span>
-          </NavLink>
+          </button>
         </div>
       )}
     </nav>
