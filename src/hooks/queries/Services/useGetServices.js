@@ -8,9 +8,6 @@ const PRODUCT_ID = ENV_CONFIG.PRODUCT_ID;
 const CLIENT_ID = ENV_CONFIG.CLIENT_ID;
 export const IN_TEMPLE_CATEGORY = 'IN-TEMPLE';
 
-/**
- * Safely parses date string (MM/dd/yyyy) to a normalized midnight Date object.
-*/
 export const parseServiceDate = (dateStr) => {
     if (!dateStr || typeof dateStr !== 'string' || !dateStr.trim()) {
         return null;
@@ -134,6 +131,8 @@ export const adaptInTempleServicesData = (rawData) => {
                 serviceCategoryTypes: item?.serviceCategoryTypes || IN_TEMPLE_CATEGORY,
                 status: item?.status || 'ACTIVE',
                 sequenceId: item?.sequenceIdAsNumber ?? (parseInt(item?.sequenceId, 10) || 999999),
+                includeSankalpam: item?.includeSankalpam || '',
+                rawItem: item, // Preserve the original raw item for any future reference
             };
         });
     } catch (error) {
