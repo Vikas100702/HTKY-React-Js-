@@ -1,397 +1,536 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/useCartStore";
+import { useDevoteeProfile } from "../../hooks/queries/Profile/useDevoteeProfile";
+import { FamilySankalpamForm } from "../../components/profile/FamilySankalpamForm";
+import { decodeBase64 } from "../../utils/base64";
+import {
+  Trash2,
+  User,
+  CreditCard,
+  ShieldCheck,
+  Plus,
+  Minus,
+  Sparkles,
+  Calendar,
+  Clock,
+  HeartHandshake,
+  Lock,
+  ArrowRight,
+} from "lucide-react";
+
+const QUICK_DONATIONS = [11, 21, 51, 101];
 
 export const Checkout = () => {
   const navigate = useNavigate();
 
-  // Cart Store Selectors
-  const items = useCartStore((state) => state.items);
-  const totalCount = useCartStore((state) => state.totalCount);
-  const totalAmount = useCartStore((state) => state.totalAmount);
+  // Cart Global State
+  const items = useCartStore((state) => state.items || []);
+  const totalCount = useCartStore((state) => state.totalCount || 0);
+  const totalAmount = useCartStore((state) => state.totalAmount || 0);
   const currencySymbol = useCartStore((state) => state.currencySymbol || "$");
+  const removeItem = useCartStore((state) => state.removeItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
   const clearCart = useCartStore((state) => state.clearCart);
-  const showToast = useCartStore((state) => state.showToast);
 
-  // Devotee Form State
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    gotra: "",
-    nakshatra: "",
-    address: "",
-    notes: "",
-  });
+  // Reusable Devotee Profile Controller Hook (Shared with Profile Flow)
+  const {
+    devoteeProfile,
+    gotras,
+    nakshatras,
+    formData: sankalpamData,
+    errors,
+    isLoading: isProfileLoading,
+    isSaving: isSankalpamSaving,
+    updateField,
+    addFamilyMember,
+    removeFamilyMember,
+    updateFamilyMember,
+    validate,
+    saveSankalpam,
+  } = useDevoteeProfile();
 
-  const [formErrors, setFormErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Sankalpam Check (Only required if any item has includeSankalpam === "YES")
+  const isSankalpamRequired = useMemo(() => {
+    return items.some((item) => {
+      const flag =
+        item?.includeSankalpam ||
+        item?.rawItem?.includeSankalpam ||
+        item?.serviceSetup?.includeSankalpam ||
+        "";
+      return String(flag).trim().toUpperCase() === "YES";
+    });
+  }, [items]);
 
-  // Form Validation
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.firstName.trim())
-      errors.firstName = "First name is required.";
-    if (!formData.lastName.trim()) errors.lastName = "Last name is required.";
+  // Local States
+  const [additionalDonation, setAdditionalDonation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
-      errors.email = "Valid email address is required.";
-    }
-
-    const phoneRegex = /^[0-9+\-\s()]{7,15}$/;
-    if (!formData.phone.trim() || !phoneRegex.test(formData.phone.trim())) {
-      errors.phone = "Valid phone number is required.";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  // Quantity Steppers
+  const handleIncreaseQty = (item) => {
+    const currentQty = Number(item.quantity) || 1;
+    updateQuantity(item.id, currentQty + 1);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: "" }));
+  const handleDecreaseQty = (item) => {
+    const currentQty = Number(item.quantity) || 1;
+    if (currentQty <= 1) {
+      removeItem(item.id);
+    } else {
+      updateQuantity(item.id, currentQty - 1);
     }
   };
 
-  // Payment Submission Handler
-  const handlePaymentSubmit = async (e) => {
+  // Payable Amount Calculations
+  const parsedDonation = Math.max(0, parseFloat(additionalDonation) || 0);
+  const finalPayable = (Number(totalAmount) || 0) + parsedDonation;
+
+  // Proceed to Pay: Saves Sankalpam First, then triggers Payment Gateway
+  const handleProceedPayment = async (e) => {
     e.preventDefault();
 
-    if (totalCount === 0) {
-      showToast(
-        "Your cart is empty. Please add services or offerings first.",
-        "warning",
-      );
-      return;
+    // If Sankalpam is mandatory, validate the form first.
+    if (isSankalpamRequired) {
+      const isValid = validate();
+      if (!isValid) {
+        return;
+      }
     }
-
-    if (!validateForm()) {
-      showToast("Please correct the highlighted form errors.", "warning");
-      return;
-    }
-
-    setIsSubmitting(true);
 
     try {
-      // In production, formulate payload and call payment mutation (e.g. Stripe / Square session)
-      const bookingPayload = {
-        devotee: formData,
-        items: items.map((item) => ({
-          id: item.id,
-          title: item.title,
-          amount: item.amount,
-          quantity: item.quantity,
-          itemType: item.itemType,
-          selectedDate: item.selectedDate || null,
-          selectedTime: item.selectedTime || null,
-          selectedDiety: item.selectedDiety || null,
-        })),
-        totalAmount,
-        currencySymbol,
-        submittedAt: new Date().toISOString(),
-      };
+      setIsProcessingPayment(true);
 
-      console.log("[HTKY_CHECKOUT_SUBMIT]", bookingPayload);
+      // First, send the Sankalpam form data to the save/update API.
+      if (isSankalpamRequired) {
+        const saveResponse = await saveSankalpam();
+        if (
+          saveResponse?.statusCode !== "1" &&
+          saveResponse?.statusCode !== 1
+        ) {
+          alert(
+            saveResponse?.message ||
+              "Failed to save Sankalpam details. Please verify your entries.",
+          );
+          setIsProcessingPayment(false);
+          return;
+        }
+      }
 
-      // Simulation of gateway response
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Trigger the payment gateway after saving Sankalpam.
+      // (Next step: execute the payment script, open the modal, or redirect.)
+      console.log("[HTKY_CHECKOUT_SUCCESS_PAYLOAD]", {
+        items,
+        sankalpam: isSankalpamRequired ? sankalpamData : null,
+        additionalDonation: parsedDonation,
+        totalPayable: finalPayable,
+        notes,
+      });
 
-      clearCart();
-      showToast("Booking/Donation submitted successfully!", "success");
-      navigate("/services");
-    } catch (err) {
-      console.error("[HTKY_CHECKOUT_ERROR]", err);
-      showToast("Payment processing failed. Please try again.", "error");
+      alert(
+        `Sankalpam saved successfully! Ready to initialize Payment Gateway for ${currencySymbol}${finalPayable.toFixed(2)}.`,
+      );
+    } catch (error) {
+      console.error("[HTKY_APM][CHECKOUT_SAVE_ERROR]", error);
+      alert(
+        "An error occurred while saving Sankalpam information. Please try again.",
+      );
     } finally {
-      setIsSubmitting(false);
+      setIsProcessingPayment(false);
     }
   };
 
-  // Empty Cart Guard
   if (items.length === 0) {
     return (
-      <section className="w-full min-h-screen bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-fill bg-top py-20 px-4">
-        <div className="max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 p-8 shadow-sm text-center">
-          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-700 font-serif text-2xl font-bold mb-4">
+      <div className="min-h-[75vh] flex items-center justify-center px-4 py-16">
+        <div className="bg-white/80 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-sm border border-amber-200/50 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-50 text-[#900000] rounded-2xl flex items-center justify-center mx-auto text-2xl font-serif font-bold mb-4">
             ॐ
           </div>
-          <h2 className="text-xl font-bold text-gray-900">
-            No Items to Checkout
+          <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">
+            Cart is Empty
           </h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Your sacred offerings cart is currently empty.
+          <p className="text-sm text-gray-500 mb-6">
+            Explore our auspicious pooja services and temple seva offerings.
           </p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link
-              to="/services"
-              className="px-5 py-2.5 rounded-xl bg-[#900000] text-amber-300 font-bold text-xs uppercase tracking-wider hover:bg-[#7a0000] transition-all shadow-xs"
-            >
-              Explore Services
-            </Link>
-          </div>
+          <Link
+            to="/services"
+            className="inline-flex items-center justify-center gap-2 w-full bg-[#900000] text-amber-300 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#7a0000] transition-colors shadow-sm"
+          >
+            Explore Services <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
-      </section>
+      </div>
     );
   }
 
+  const isActionLoading = isSankalpamSaving || isProcessingPayment;
+
   return (
-    <section className="w-full min-h-screen bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-fill bg-top pb-24">
-      {/* Header Banner */}
-      <header className="relative text-white py-6 px-4 sm:px-6 lg:px-8 border-b border-gray-200/60 bg-white/40 backdrop-blur-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-[#faf8f5] py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-200/70">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#900000] tracking-tight">
-              Checkout & Confirmation
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#900000]" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#900000]">
+                Secure Checkout
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 mt-1">
+              Review & Confirm Offerings
             </h1>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Provide devotee contact details to complete your temple offerings
-            </p>
           </div>
-          <Link
-            to="/cart"
-            className="text-xs font-semibold text-[#900000] hover:underline flex items-center gap-1"
+          <button
+            type="button"
+            onClick={() => navigate("/services")}
+            className="self-start sm:self-auto px-4 py-2 text-xs font-semibold rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors shadow-xs cursor-pointer"
           >
-            ← Back to Cart
-          </Link>
+            Continue Browsing ✕
+          </button>
         </div>
-      </header>
 
-      {/* Main Grid: Form Left, Order Review Right */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <form
-          onSubmit={handlePaymentSubmit}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+          onSubmit={handleProceedPayment}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
         >
-          {/* Left 2 Columns: Devotee & Contact Information */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
-              <h2 className="text-base sm:text-lg font-serif font-bold text-gray-900 border-b border-gray-100 pb-2">
-                1. Devotee Contact Information
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    First Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000] ${
-                      formErrors.firstName
-                        ? "border-red-400 bg-red-50/30"
-                        : "border-gray-200"
-                    }`}
-                    placeholder="Enter first name"
-                  />
-                  {formErrors.firstName && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {formErrors.firstName}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000] ${
-                      formErrors.lastName
-                        ? "border-red-400 bg-red-50/30"
-                        : "border-gray-200"
-                    }`}
-                    placeholder="Enter last name"
-                  />
-                  {formErrors.lastName && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {formErrors.lastName}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Email Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000] ${
-                      formErrors.email
-                        ? "border-red-400 bg-red-50/30"
-                        : "border-gray-200"
-                    }`}
-                    placeholder="devotee@example.com"
-                  />
-                  {formErrors.email && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {formErrors.email}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Phone Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000] ${
-                      formErrors.phone
-                        ? "border-red-400 bg-red-50/30"
-                        : "border-gray-200"
-                    }`}
-                    placeholder="+1 (555) 000-0000"
-                  />
-                  {formErrors.phone && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {formErrors.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Optional Sankalpam Details */}
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
-              <h2 className="text-base sm:text-lg font-serif font-bold text-gray-900 border-b border-gray-100 pb-2">
-                2. Sankalpam / Ritual Information (Optional)
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Gotra
-                  </label>
-                  <input
-                    type="text"
-                    name="gotra"
-                    value={formData.gotra}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000]"
-                    placeholder="e.g. Kashyapa, Bharadwaja"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Nakshatra
-                  </label>
-                  <input
-                    type="text"
-                    name="nakshatra"
-                    value={formData.nakshatra}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000]"
-                    placeholder="e.g. Rohini, Ashwini"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Special Pooja Notes / Names of Family Members
-                </label>
-                <textarea
-                  rows="2"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#900000]"
-                  placeholder="Enter family names or specific seva instructions..."
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Order Review & Payment Gateway Trigger */}
-          <aside
-            role="complementary"
-            aria-label="Order Checkout Review"
-            className="bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 p-6 shadow-sm h-fit space-y-5"
-          >
-            <h2 className="text-base sm:text-lg font-serif font-bold text-gray-900 border-b border-gray-100 pb-2">
-              Order Review ({totalCount})
-            </h2>
-
-            {/* Compact Item Breakdown */}
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-start text-xs border-b border-gray-50 pb-2"
-                >
-                  <div className="pr-2">
-                    <p className="font-semibold text-gray-800 leading-tight">
-                      {item.title}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      Qty: {item.quantity || 1}{" "}
-                      {item.selectedTime ? `• ${item.selectedTime}` : ""}
-                    </p>
+          
+          {/* SANKALPAM FORM + ORDER SUMMARY */}        
+          <div className="lg:col-span-7 space-y-6">
+            {/* SHARED FAMILY SANKALPAM COMPONENT */}
+            {isSankalpamRequired && (
+              <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-amber-300/80 relative">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 rounded-xl bg-amber-100 text-amber-900 font-bold">
+                      ॐ
+                    </span>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-serif font-bold text-gray-900">
+                        Family Sankalpam Details
+                      </h2>
+                      <p className="text-xs text-gray-500">
+                        Chanted by temple priests during the auspicious ritual
+                      </p>
+                    </div>
                   </div>
-                  <span className="font-bold text-gray-900 shrink-0">
-                    {currencySymbol}
-                    {(
-                      (Number(item.amount) || 0) * (Number(item.quantity) || 1)
-                    ).toFixed(2)}
+                  <span className="text-[10px] font-bold uppercase bg-red-100 text-[#900000] px-2.5 py-1 rounded-full">
+                    Mandatory
                   </span>
                 </div>
-              ))}
-            </div>
 
-            {/* Totals */}
-            <div className="pt-2 border-t border-gray-100 space-y-2 text-sm">
-              <div className="flex justify-between items-baseline">
-                <span className="font-bold text-gray-900">Total Payable</span>
-                <span className="font-serif font-bold text-2xl text-[#900000]">
+                <FamilySankalpamForm
+                  formData={sankalpamData}
+                  errors={errors}
+                  gotras={gotras}
+                  nakshatras={nakshatras}
+                  isLoading={isProfileLoading}
+                  updateField={updateField}
+                  addFamilyMember={addFamilyMember}
+                  removeFamilyMember={removeFamilyMember}
+                  updateFamilyMember={updateFamilyMember}
+                />
+              </div>
+            )}
+
+            {/* ORDER SUMMARY */}
+            <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-gray-200/80">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2 rounded-xl bg-red-50 text-[#900000]">
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-serif font-bold text-gray-900">
+                      Your Selected Offerings
+                    </h2>
+                    <p className="text-xs text-gray-500">
+                      {totalCount} item(s) in cart
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="text-xs text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                >
+                  Clear Cart
+                </button>
+              </div>
+
+              {/* Items List with Stepper */}
+              <div className="divide-y divide-gray-100">
+                {items.map((item) => {
+                  const qty = Number(item.quantity) || 1;
+                  const unitPrice = Number(item.amount) || 0;
+                  const itemTotal = unitPrice * qty;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                      <div className="flex-1 space-y-1.5">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/60 uppercase tracking-wide">
+                          {item.category || item.itemType || "SEVA"}
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
+                          {item.title}
+                        </h3>
+
+                        {(item.selectedDate || item.selectedTime) && (
+                          <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-gray-600">
+                            {item.selectedDate && (
+                              <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-md">
+                                <Calendar className="w-3 h-3 text-gray-400" />
+                                {new Date(
+                                  item.selectedDate,
+                                ).toLocaleDateString()}
+                              </span>
+                            )}
+                            {item.selectedTime && (
+                              <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-md">
+                                <Clock className="w-3 h-3 text-gray-400" />
+                                {item.selectedTime}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-5">
+                        <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50 p-1 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleDecreaseQty(item)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors shadow-2xs cursor-pointer"
+                            title={
+                              qty === 1 ? "Remove Item" : "Decrease Quantity"
+                            }
+                          >
+                            {qty === 1 ? (
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            ) : (
+                              <Minus className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <span className="w-8 text-center text-xs font-bold text-gray-900">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleIncreaseQty(item)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 hover:text-emerald-700 transition-colors shadow-2xs cursor-pointer"
+                            title="Increase Quantity"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="text-right min-w-[75px]">
+                          <span className="text-sm sm:text-base font-serif font-bold text-gray-900">
+                            {currencySymbol}
+                            {itemTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-4 mt-2 border-t border-gray-100 flex items-center justify-between text-sm">
+                <span className="text-gray-500 font-medium">
+                  Items Subtotal
+                </span>
+                <span className="font-bold text-gray-900">
                   {currencySymbol}
-                  {totalAmount.toFixed(2)}
+                  {Number(totalAmount).toFixed(2)}
                 </span>
               </div>
             </div>
 
-            {/* Submit Action */}
-            <button
-              type="submit"
-              disabled={isSubmitting || totalCount === 0}
-              className="w-full py-3.5 rounded-xl bg-[#900000] text-amber-300 hover:bg-[#7a0000] font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isSubmitting ? (
-                <span>Processing Payment...</span>
-              ) : (
-                <>
-                  <span>Pay & Complete Booking</span>
-                  <span aria-hidden="true">→</span>
-                </>
-              )}
-            </button>
+            {/* SPECIAL SANKALPAM NOTES */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200/80">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                Special Sankalpam Instructions / Gotra Names
+              </label>
+              <textarea
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Mention any additional family names, specific sankalpam intent, or pooja instructions..."
+                className="w-full text-xs p-3.5 bg-gray-50/50 rounded-xl border border-gray-200 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#900000] transition-all"
+              />
+            </div>
+          </div>
 
-            <p className="text-[10px] text-gray-400 text-center leading-normal">
-              🔒 Encrypted 256-bit SSL transaction. Official tax deduction
-              receipts will be dispatched to the provided email.
-            </p>
-          </aside>
+          
+          {/* PROFILE + DONATION + DUMMY CARD */}
+          
+          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+            <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-gray-200/80 space-y-5">
+              {/* Devotee Info Badge */}
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-sm">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-900">
+                      {devoteeProfile?.refDataName ||
+                        `${sankalpamData.firstName || ""} ${sankalpamData.lastName || ""}`.trim() ||
+                        "DEVOTEE"}
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      {devoteeProfile?.email
+                        ? decodeBase64(devoteeProfile.email)
+                        : "devotee@example.com"}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] font-semibold text-gray-700 block">
+                    {devoteeProfile?.phone || ""}
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                    Signed In
+                  </span>
+                </div>
+              </div>
+
+              {/* Additional Donation */}
+              <div className="bg-amber-50/40 p-4 rounded-xl border border-amber-200/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <HeartHandshake className="w-4 h-4 text-[#900000]" />
+                    Support Temple Fund
+                  </span>
+                  <span className="text-[11px] text-gray-400">Optional</span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {QUICK_DONATIONS.map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setAdditionalDonation(String(amt))}
+                      className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                        parsedDonation === amt
+                          ? "bg-[#900000] text-amber-300 border-[#900000] shadow-2xs"
+                          : "bg-white text-gray-700 border-gray-200 hover:border-amber-300"
+                      }`}
+                    >
+                      +${amt}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative pt-1">
+                  <span className="absolute left-3 top-3 text-xs font-bold text-gray-400">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={additionalDonation}
+                    onChange={(e) => setAdditionalDonation(e.target.value)}
+                    placeholder="Custom donation amount"
+                    className="w-full pl-7 pr-3 py-2 text-xs font-bold bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#900000]"
+                  />
+                </div>
+              </div>
+
+              {/* Amount Breakdown */}
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Pooja Offerings Subtotal</span>
+                  <span>
+                    {currencySymbol}
+                    {Number(totalAmount).toFixed(2)}
+                  </span>
+                </div>
+                {parsedDonation > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-700 font-semibold">
+                    <span>Additional Temple Donation</span>
+                    <span>
+                      +{currencySymbol}
+                      {parsedDonation.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline pt-2 border-t border-gray-100">
+                  <span className="text-sm font-bold text-gray-900">
+                    Final Amount to Pay:
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-serif font-extrabold text-[#900000]">
+                    {currencySymbol}
+                    {finalPayable.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* DUMMY CARD DETAILS PLACEHOLDER */}
+              <div className="pt-3 border-t border-gray-100 space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-700">
+                  <span className="flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-[#900000]" />
+                    Card Details
+                  </span>
+                  <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded font-semibold">
+                    Gateway Ready
+                  </span>
+                </div>
+
+                <div className="border border-gray-200 rounded-xl p-3 bg-gray-50/60 space-y-2 opacity-85">
+                  <div className="text-xs text-gray-400 bg-white border border-gray-200 rounded-lg px-3 py-2.5 font-mono">
+                    •••• •••• •••• ••••
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-xs text-gray-400 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                      MM / YY
+                    </div>
+                    <div className="text-xs text-gray-400 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                      CVV
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-xl p-3 bg-gray-50/60 flex items-center justify-between text-xs text-gray-600">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked
+                      readOnly
+                      className="rounded text-[#900000]"
+                    />
+                    I am offering with devotion
+                  </label>
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                </div>
+              </div>
+
+              {/* Submit CTA */}
+              <button
+                type="submit"
+                disabled={isActionLoading}
+                className="w-full py-3.5 bg-[#900000] text-amber-300 hover:bg-[#7a0000] rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                {isActionLoading
+                  ? "Saving Sankalpam Details..."
+                  : `Proceed to Pay ${currencySymbol}${finalPayable.toFixed(2)}`}
+              </button>
+
+              <p className="text-[10px] text-gray-400 text-center">
+                All donations are tax-exempt according to temple regulations.
+              </p>
+            </div>
+          </div>
         </form>
-      </main>
-    </section>
+      </div>
+    </div>
   );
 };
