@@ -28,5 +28,6 @@ export const ENDPOINTS = Object.freeze({
     SERVICE_AVAILABILITY: '/api/service-availability',
     ADD_CUSTOMER_DETAIL: '/api/customerDetails/addCustomerDetailWeb',
     GET_COMPANY_DETAILS: '/api/auth/getCompanyDetails',
-    GET_DEVOTEE_DETAILS_WEB: '/api/customerDetails/getDevoteeDetailsWeb'
+    GET_DEVOTEE_DETAILS_WEB: '/api/customerDetails/getDevoteeDetailsWeb',
+    CHECKOUT_SANLAPAM_FORM: '/api/appgen/postAPI'
 });
