@@ -219,13 +219,13 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
     const checked = e.target.checked;
 
     if (checked) {
-      // 1. Diety Validation Check
+      // Deity validation check
       if (isDietyDropdownVisible && !selectedDiety) {
         showToast("Please select a diety from the dropdown.", "warning");
         return;
       }
 
-      // 2. Date Validation Check (agar date visible hai)
+      // Date validation check
       if (isDTVisible && selectedDates.length === 0) {
         showToast(
           "Please select a date to proceed with this service.",
@@ -234,7 +234,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         return;
       }
 
-      // 3. Global Cart Store mein Item Add Karein
+      // Add the item to the global cart store
       const finalPrice =
         parsedServiceAmount > 0
           ? parsedServiceAmount
@@ -251,13 +251,16 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         selectedDates: selectedDates || [],
         selectedTime: selectedTime || "",
         selectedDiety: selectedDiety || "",
+        includeSankalpam:
+          service.includeSankalpam || service.rawItem?.includeSankalpam || "",
+        rawItem: service.rawItem || service,
       };
 
       if (typeof insertItem === "function") {
         insertItem(cartPayload);
       }
     } else {
-      // Uncheck hone par Global Cart se remove karein
+      // Remove the item from the global cart when unchecked
       if (typeof removeItemFromCart === "function") {
         removeItemFromCart(serviceKey);
       }
@@ -304,7 +307,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
             : "border-gray-200"
       }`}
     >
-      {/* 1. Top Image */}
+      {/* Top Image */}
       <div className="relative h-48 bg-amber-50 overflow-hidden">
         <img
           src={
@@ -317,7 +320,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         />
       </div>
 
-      {/* 2. Body Content */}
+      {/* Body Content */}
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex items-start justify-between gap-3">
@@ -326,7 +329,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
                 {service.title}
               </h3>
 
-              {/* Amount Badge: Fixed ya Flexible */}
+              {/* Amount Badge */}
               <div className="mt-1">
                 {isCustomAmount ? (
                   <span className="inline-block bg-amber-50 text-amber-800 border border-amber-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -363,7 +366,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
           )}
         </div>
 
-        {/* 3. Interactive Slot Pickers & Modifiers */}
+        {/* Interactive Slot Pickers & Modifiers */}
         <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
           {/* Diety Dropdown */}
           {isDietyDropdownVisible && (
