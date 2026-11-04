@@ -29,7 +29,11 @@ apiClient.interceptors.request.use(
         if (config.pre) {
             config.baseURL = PRE_BASE_URL
         }
-        // Future proofing: Inject auth tokens here for Devotee Portal later
+
+        // If a token is provided in the request config, attach the Authorization header.
+        if (config.token) {
+            config.headers.Authorization = `Bearer ${config.token}`;
+        }
         return config;
     },
     (error) => {
@@ -47,7 +51,7 @@ apiClient.interceptors.response.use(
         return response.data;
     },
     (error) => {
-        // Rule #3: Check if the request was canceled explicitly by our AbortController
+        // Check if the request was canceled explicitly by our AbortController
         if (axios.isCancel(error)) {
             console.warn('[API] Request safely aborted due to component unmount.');
             return Promise.reject({ isCanceled: true, message: 'Request aborted' });
