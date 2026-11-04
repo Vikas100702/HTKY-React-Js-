@@ -19,7 +19,7 @@ export const decodeBase64 = (base64Str) => {
     if (!base64Str) return "";
     try {
         const binaryString = atob(String(base64Str));
-        const len = binaryString.len;
+        const len = binaryString.length;
         const bytes = new Uint8Array(len);
         for (let i = 0; i < len; i++) {
             bytes[i] = binaryString.charCodeAt(i);
