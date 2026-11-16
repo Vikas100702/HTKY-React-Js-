@@ -10,6 +10,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { AuthGuard } from "./components/auth/AuthGuard";
 import { APP_COLORS } from "./constants/appColors";
 import { APP_FONTS } from "./constants/appTheme";
+import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -144,7 +145,7 @@ const GeneralDonationPage = lazy(() =>
 
 // Cart & Checkout Pages
 const CartPage = lazy(() =>
-  import("./pages/Cart/Cart").then((m) => ({
+  import("./pages/Checkout/Checkout").then((m) => ({
     default: m.CartPage,
   })),
 );
@@ -152,6 +153,12 @@ const CartPage = lazy(() =>
 const CheckoutPage = lazy(() =>
   import("./pages/Checkout/Checkout").then((m) => ({
     default: m.Checkout,
+  })),
+);
+
+const PaymentSuccessPage = lazy(() =>
+  import("./pages/Checkout/PaymentSuccess").then((m) => ({
+    default: m.PaymentSuccess,
   })),
 );
 
@@ -270,9 +277,23 @@ const router = createBrowserRouter([
       {
         path: "checkout",
         element: (
-          <Suspense fallback={<RouteSuspenseFallback />}>
-            <CheckoutPage />
-          </Suspense>
+          <ErrorBoundary name="CheckoutPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <CheckoutPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+
+      // 4. Payment Success & Receipt Route
+      {
+        path: "checkout/success",
+        element: (
+          <ErrorBoundary name="PaymentSuccessPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <PaymentSuccessPage />
+            </Suspense>
+          </ErrorBoundary>
         ),
       },
 
