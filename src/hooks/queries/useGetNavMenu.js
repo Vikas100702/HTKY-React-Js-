@@ -56,6 +56,14 @@ const DEFAULT_NAV_ITEMS = [
             { id: '8-8', title: 'SHIRDI SAI SATSANG', path: '/shirdi-sai-satsang' },
         ],
     },
+    {
+        id: '9',
+        title: 'MY ACCOUNT',
+        subMenu: [
+            { id: '9-1', title: 'MY ACCOUNT', path: '/about-temple' },
+            { id: '9-2', title: 'LOGOUT', path: '/about-deities' }
+        ],
+    },
 ];
 
 const adaptNavMenuData = (rawData) => {
