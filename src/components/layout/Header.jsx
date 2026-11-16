@@ -5,8 +5,10 @@ import { APP_COLORS } from "../../constants/appColors";
 import { APP_STRINGS } from "../../constants/appStrings";
 import { APP_FONTS } from "../../constants/appTheme";
 import { Phone, Mail, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const Header = () => {
+  const navigate = useNavigate();
   const {
     data: headerData,
     isLoading: isHeaderLoading,
@@ -135,8 +137,10 @@ export const Header = () => {
         <div className="flex flex-row justify-center w-full max-w-sm xl:max-w-none">
           {isAuthenticated ? (
             <div
-              className="flex items-center gap-2 bg-white/90 border border-yellow-600/30 py-1.5 px-3 rounded-md shadow-md"
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2 border border-yellow-600/30 py-1.5 px-3.5 rounded-md shadow-md cursor-pointer hover:opacity-95 transition-all select-none"
               style={{ backgroundColor: APP_COLORS.primary }}
+              title="View / Update Profile"
             >
               <span
                 className="text-xs md:text-sm font-bold tracking-wide uppercase"
@@ -145,9 +149,13 @@ export const Header = () => {
                 Welcome, {user?.firstName || user?.name || "Devotee"}
               </span>
               <button
-                onClick={handleLogout}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation(); // Profile redirect rokkne ke liye
+                  handleLogout();
+                }}
                 title="Logout"
-                className="ml-1 p-1 text-gray-600 hover:text-red-600 rounded transition-all cursor-pointer"
+                className="ml-1.5 p-1 hover:bg-black/20 rounded transition-all cursor-pointer"
                 aria-label="Logout"
               >
                 <LogOut
