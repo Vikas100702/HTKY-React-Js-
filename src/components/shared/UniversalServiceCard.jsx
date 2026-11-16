@@ -248,6 +248,14 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         quantity: quantity || 1,
         image: service.imageUrl || "",
         itemType: "SERVICE",
+        serviceCategoryTypes:
+          service.serviceCategoryTypes ||
+          service.rawItem?.serviceCategoryTypes ||
+          "IN-TEMPLE",
+        serviceTypes:
+          service.serviceTypes || service.rawItem?.serviceTypes || "",
+        bookingType: service.bookingType || service.rawItem?.bookingType || "",
+        dayTypes: service?.dayTypes || service.rawItem?.dayTypes || "",
         selectedDates: selectedDates || [],
         selectedTime: selectedTime || "",
         selectedDiety: selectedDiety || "",
