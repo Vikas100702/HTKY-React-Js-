@@ -44,3 +44,16 @@ export const FIREBASE_CONFIG = Object.freeze({
     appId: getSecureEnvVar("VITE_FIREBASE_APP_ID"),
     measurementId: getSecureEnvVar("VITE_FIREBASE_MEASUREMENT_ID", true)
 });
+
+export const MPI_PAYMENT_CONFIG = Object.freeze({
+    LIVE_SCRIPT: getSecureEnvVar("VITE_MPI_LIVE_SCRIPT"),
+    TEST_SCRIPT: getSecureEnvVar("VITE_MPI_TEST_SCRIPT"),
+    DEFAULT_TEST_TOKEN: getSecureEnvVar("VITE_MPI_DEFAULT_TEST_TOKEN"),
+});
+
+export const NMI_PAYMENT_CONFIG = Object.freeze({
+    LIVE_API: getSecureEnvVar("VITE_NMI_LIVE_API"),
+    TEST_API: getSecureEnvVar("VITE_NMI_TEST_API"),
+    LIVE_SCRIPT: getSecureEnvVar("VITE_NMI_LIVE_SCRIPT"),
+    TEST_SCRIPT: getSecureEnvVar("VITE_NMI_TEST_SCRIPT"),
+});
