@@ -146,7 +146,7 @@ const customerLogin = async ({ credentials, signal }) => {
     try {
         const payload = buildAuthPayload(credentials);
         const response = await apiClient.post(
-            ENDPOINTS.CUSTOMER_LOGIN || '/api/customerDetails/customerLoginWeb',
+            ENDPOINTS.CUSTOMER_LOGIN,
             payload,
             { signal, pre: false }
         );
