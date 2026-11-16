@@ -6,7 +6,9 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import { buildComponentConfigPayload } from '../../../utils/apiPayloadBuilder';
 
 // Fetch Devotee Details by memberId
-export const useGetDevoteeDetails = (memberId) => {
+export const useGetDevoteeDetails = (memberId, options = {}) => {
+    const deviceIp = options?.ipAddress || '127.0.0.1';
+
     return useQuery({
         queryKey: ['devoteeDetails', memberId],
         queryFn: async ({ signal }) => {
@@ -15,7 +17,7 @@ export const useGetDevoteeDetails = (memberId) => {
             const payload = {
                 dataJson: {
                     memberId: memberId,
-                    ipAddress: '23.181.160.110',
+                    ipAddress: deviceIp,
                 },
                 ...buildComponentConfigPayload({
                     moduleName: 'Contacts',
@@ -26,7 +28,7 @@ export const useGetDevoteeDetails = (memberId) => {
             const response = await apiClient.post(
                 ENDPOINTS.GET_DEVOTEE_DETAILS_WEB,
                 payload,
-                { signal, pre: true }
+                { signal, pre: false }
             );
 
             const rawList = Array.isArray(response?.data?.data)
@@ -103,6 +105,36 @@ export const useGetGotras = () => {
     });
 };
 
+// Fetch Rashi Master Data
+export const useGetRashis = () => {
+    return useQuery({
+        queryKey: ['masterData', 'rashis'],
+        queryFn: async ({ signal }) => {
+            const payload = buildComponentConfigPayload({
+                moduleName: 'Master Data Management',
+                aspectType: 'rashiTypes',
+                query: { aspectType: 'rashiTypes' }
+            });
+
+            const response = await apiClient.post(ENDPOINTS.FILTER_API, payload, { signal, pre: true });
+            const list = Array.isArray(response?.data?.data)
+                ? response.data.data
+                : Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+
+            const extractedNames = list
+                .filter((item) => String(item?.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
+                .map((item) => (item?.refDataName ? String(item.refDataName).trim() : ''))
+                .filter(Boolean);
+
+            return Array.from(new Set(extractedNames)).sort((a, b) => a.localeCompare(b));
+        },
+        staleTime: 1000 * 60 * 60,
+        refetchOnWindowFocus: false,
+    });
+};
+
 // Save/Update Devotee Sankalpam Details
 export const useSaveDevoteeSankalpam = () => {
     const queryClient = useQueryClient();
@@ -144,13 +176,12 @@ export const useSaveDevoteeSankalpam = () => {
                 },
                 ...buildComponentConfigPayload({
                     moduleName: 'Contacts',
-                    aspectType: 'saveDevoteeSankalpam',
                     userName: userName || '',
                 }),
             };
 
             const response = await apiClient.post(
-                ENDPOINTS.CHECKOUT_SANLAPAM_FORM,
+                ENDPOINTS.CHECKOUT_SANKALPAM_FORM,
                 payload,
                 {
                     token: activeToken,
