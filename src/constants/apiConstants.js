@@ -64,4 +64,5 @@ export const ENDPOINTS = Object.freeze({
     NMI_MAKE_PAYMENT: 'NMI_Payment/makePayment',
     ADD_TO_CART: 'Common/AddToCart',
     UPDATE_TRANSACTION_STATUS: 'Common/updateTransactionStatus',
+    ADD_MEMBERSHIP: 'api/home/addMemberShip',
 });
