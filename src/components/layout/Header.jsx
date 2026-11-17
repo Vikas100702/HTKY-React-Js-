@@ -137,7 +137,7 @@ export const Header = () => {
         <div className="flex flex-row justify-center w-full max-w-sm xl:max-w-none">
           {isAuthenticated ? (
             <div
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/account/dashboard")}
               className="flex items-center gap-2 border border-yellow-600/30 py-1.5 px-3.5 rounded-md shadow-md cursor-pointer hover:opacity-95 transition-all select-none"
               style={{ backgroundColor: APP_COLORS.primary }}
               title="View / Update Profile"
