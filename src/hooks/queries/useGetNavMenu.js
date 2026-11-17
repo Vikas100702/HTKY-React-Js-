@@ -60,8 +60,8 @@ const DEFAULT_NAV_ITEMS = [
         id: '9',
         title: 'MY ACCOUNT',
         subMenu: [
-            { id: '9-1', title: 'MY ACCOUNT', path: '/about-temple' },
-            { id: '9-2', title: 'LOGOUT', path: '/about-deities' }
+            { id: '9-1', title: 'MY ACCOUNT', path: '/account/dashboard' },
+            { id: '9-2', title: 'LOGOUT', path: '#logout' }
         ],
     },
 ];
