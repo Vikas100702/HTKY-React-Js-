@@ -11,6 +11,7 @@ import { AuthGuard } from "./components/auth/AuthGuard";
 import { APP_COLORS } from "./constants/appColors";
 import { APP_FONTS } from "./constants/appTheme";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
+import { AccountLayout } from "./components/layout/AccountLayout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,6 +123,12 @@ const DashboardPage = lazy(() =>
 
 const UserProfilePage = lazy(() =>
   import("./pages/Auth/UserProfile").then((m) => ({ default: m.UserProfile })),
+);
+
+const MembershipPage = lazy(() =>
+  import("./pages/Membership/MembershipPage").then((m) => ({
+    default: m.MembershipPage,
+  })),
 );
 
 const ServicesPage = lazy(() =>
@@ -311,24 +318,50 @@ const router = createBrowserRouter([
         element: <Navigate to="/services" replace />,
       },
 
-      // Protected Dashboard & Profile
       {
-        path: "dashboard",
+        path: "account",
         element: (
           <AuthGuard>
-            <Suspense fallback={<RouteSuspenseFallback />}>
-              <DashboardPage />
-            </Suspense>
+            <AccountLayout />
           </AuthGuard>
         ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/account/dashboard" replace />,
+          },
+          {
+            path: "dashboard",
+            element: (
+              <ErrorBoundary name="DashboardPage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <DashboardPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "profile",
+            element: (
+              <ErrorBoundary name="UserProfilePage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <UserProfilePage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+        ],
       },
+
       {
-        path: "profile",
+        path: "membership",
         element: (
           <AuthGuard>
-            <Suspense fallback={<RouteSuspenseFallback />}>
-              <UserProfilePage />
-            </Suspense>
+            <ErrorBoundary name="MembershipPage">
+              <Suspense fallback={<RouteSuspenseFallback />}>
+                <MembershipPage />
+              </Suspense>
+            </ErrorBoundary>
           </AuthGuard>
         ),
       },
