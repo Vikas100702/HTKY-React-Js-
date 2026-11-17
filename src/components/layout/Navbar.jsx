@@ -22,6 +22,13 @@ const resolveSafePath = (item) => {
     return item.path && item.path !== "/" ? item.path : "/donations/recurring";
   }
 
+  if (title === "MY ACCOUNT") {
+    return "/account/dashboard";
+  }
+  if (title === "LOGOUT") {
+    return "#logout";
+  }
+
   const isHome = title === "HOME";
   const rawPath = item.path || "/";
 
@@ -35,7 +42,13 @@ const resolveSafePath = (item) => {
 export const Navbar = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const openModal = useModalStore((state) => state.openModal);
+
+  const handleLogout = () => {
+    logout();
+    window.location.reload();
+  };
 
   // On cart click, open the sign-in modal if the user is not signed in; otherwise, navigate to checkout.
   const handleCartClick = () => {
@@ -123,6 +136,12 @@ export const Navbar = () => {
           {/* Desktop View: Horizontal Navigation Links */}
           <div className="hidden md:flex md:items-center md:space-x-1 lg:space-x-3 text-xs lg:text-sm font-semibold tracking-wide">
             {navItems?.map((item) => {
+              if (
+                (item.title || "").trim().toUpperCase() === "MY ACCOUNT" &&
+                !isAuthenticated
+              ) {
+                return null;
+              }
               const hasSubMenu =
                 Array.isArray(item?.subMenu) && item.subMenu.length > 0;
 
@@ -183,6 +202,12 @@ export const Navbar = () => {
                             key={sub.id}
                             to={safeSubPath}
                             end
+                            onClick={(e) => {
+                              if (safeSubPath === "#logout") {
+                                e.preventDefault();
+                                handleLogout();
+                              }
+                            }}
                             className="block px-4 py-2.5 text-xs transition-colors uppercase tracking-wider hover:bg-black/20"
                             style={({ isActive }) => {
                               const active =
@@ -238,6 +263,12 @@ export const Navbar = () => {
           }}
         >
           {navItems?.map((item) => {
+            if (
+              (item.title || "").trim().toUpperCase() === "MY ACCOUNT" &&
+              !isAuthenticated
+            ) {
+              return null;
+            }
             const hasSubMenu =
               Array.isArray(item?.subMenu) && item.subMenu.length > 0;
             const isSubMenuOpen = openDropdownId === item.id;
@@ -304,7 +335,13 @@ export const Navbar = () => {
                           key={sub.id}
                           to={safeSubPath}
                           end
-                          onClick={() => setIsMobileOpen(false)}
+                          onClick={(e) => {
+                            setIsMobileOpen(false);
+                            if (safeSubPath === "#logout") {
+                              e.preventDefault();
+                              handleLogout();
+                            }
+                          }}
                           className="block py-1.5 text-[11px] uppercase tracking-wider transition-opacity hover:opacity-80"
                           style={({ isActive }) => {
                             const active =
