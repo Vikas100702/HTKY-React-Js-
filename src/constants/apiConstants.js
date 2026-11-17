@@ -65,4 +65,5 @@ export const ENDPOINTS = Object.freeze({
     ADD_TO_CART: 'Common/AddToCart',
     UPDATE_TRANSACTION_STATUS: 'Common/updateTransactionStatus',
     ADD_MEMBERSHIP: 'api/home/addMemberShip',
+    GET_CUMULATIVE_AMOUNT: 'api/users/getCumulativeAmount'
 });

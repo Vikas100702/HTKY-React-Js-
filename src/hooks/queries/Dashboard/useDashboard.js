@@ -1,26 +1,56 @@
 /**
  * @file src/hooks/queries/Dashboard/useDashboard.js
  * @description Centralized TanStack Query controller hook for the Devotee Dashboard.
- * Reuses the cached `useGetDevoteeDetails` server query and decouples membership
- * normalization and business logic away from presentational JSX components.
+ * Combines cached `useGetDevoteeDetails` and `useGetCumulativeAmount` server queries,
+ * decoupling membership normalization and amount formatting from presentational JSX.
  *
  * Strict Tech Stack: Modern React JS (Pure ES6+ JavaScript, NO TypeScript).
  * Aligns strictly with Non-Negotiables #2, #3, #4, and #5.
  */
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useGetDevoteeDetails } from "../Profile/useDevoteeProfile";
+import { fetchCumulativeAmount } from "../../../services/dashboardApi";
 
 /**
- * Normalizes raw MongoDB devotee details into a clean, crash-safe dashboard view model.
+ * TanStack Query hook to fetch accumulated Lifetime Membership transactions
+ * from `api/users/getCumulativeAmount`.
+ *
+ * @param {string} memberId - Logged-in devotee MongoDB `_id`
+ * @returns {import('@tanstack/react-query').UseQueryResult}
+ */
+export const useGetCumulativeAmount = (memberId) => {
+    return useQuery({
+        queryKey: ["cumulativeAmount", memberId],
+        queryFn: async ({ signal }) => {
+            if (!memberId) {
+                return { totalAmount: 0, devoteeData: null };
+            }
+            return await fetchCumulativeAmount(
+                { memberId, checkAndUpdate: false },
+                { signal }
+            );
+        },
+        enabled: Boolean(memberId),
+        staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
+        refetchOnWindowFocus: false,
+    });
+};
+
+/**
+ * Normalizes raw MongoDB devotee details + cumulative transaction amount
+ * into a clean, crash-safe dashboard view model.
  *
  * @param {Object|null} profile - Fetched devotee record from `getDevoteeDetailsWeb`
+ * @param {Object|null} cumulativeResult - Fetched result from `getCumulativeAmount`
  * @param {Object|null} fallbackUser - Authenticated user object from Zustand store
  * @returns {Object} Normalized membership and greeting view model
  */
-const mapDashboardMembership = (profile, fallbackUser) => {
-    const source = profile || fallbackUser || {};
+const mapDashboardMembership = (profile, cumulativeResult, fallbackUser) => {
+    const source =
+        profile || cumulativeResult?.devoteeData || fallbackUser || {};
     const legacy = source.oldMembershipDetail || {};
 
     const fullName =
@@ -40,9 +70,12 @@ const mapDashboardMembership = (profile, fallbackUser) => {
     const memberShipExpiryDate =
         source.memberShipExpiryDate || legacy.memberShipExpiryDate || "—";
 
-    const parsedAmount = Number(
-        source.totalAccumulatedAmount ?? source.accumulatedAmount ?? 0
-    );
+    const rawTotal =
+        cumulativeResult?.totalAmount ??
+        source.totalAccumulatedAmount ??
+        source.accumulatedAmount ??
+        0;
+    const parsedAmount = Number(rawTotal);
     const accumulatedAmount = Number.isFinite(parsedAmount)
         ? parsedAmount.toFixed(2)
         : "0.00";
@@ -76,20 +109,31 @@ export const useDashboard = () => {
 
     const {
         data: devoteeDetails,
-        isLoading,
-        isError,
-        refetch,
+        isLoading: isProfileLoading,
+        isError: isProfileError,
+        refetch: refetchProfile,
     } = useGetDevoteeDetails(memberId);
 
+    const {
+        data: cumulativeData,
+        isLoading: isCumulativeLoading,
+        isError: isCumulativeError,
+        refetch: refetchCumulative,
+    } = useGetCumulativeAmount(memberId);
+
     const membership = useMemo(
-        () => mapDashboardMembership(devoteeDetails, user),
-        [devoteeDetails, user]
+        () => mapDashboardMembership(devoteeDetails, cumulativeData, user),
+        [devoteeDetails, cumulativeData, user]
     );
+
+    const refetch = async () => {
+        await Promise.all([refetchProfile(), refetchCumulative()]);
+    };
 
     return {
         membership,
-        isLoading,
-        isError,
+        isLoading: isProfileLoading || isCumulativeLoading,
+        isError: isProfileError || isCumulativeError,
         refetch,
     };
 };

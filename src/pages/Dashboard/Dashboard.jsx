@@ -79,7 +79,7 @@ export const Dashboard = () => {
           />
           <p className="text-xs sm:text-sm font-bold text-[#900000]">
             Your total transactions accumulated towards Lifetime Membership with
-            HTKY so far is
+            HTKY so far is{" "}
             <span className="font-extrabold">
               $ {membership.accumulatedAmount}
             </span>
