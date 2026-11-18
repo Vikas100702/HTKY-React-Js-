@@ -1,8 +1,27 @@
+/**
+ * @file src/pages/Checkout/Checkout.jsx
+ * @description Enterprise-grade, crash-resilient Devotee Checkout Page.
+ * Evaluates active membership eligibility (PHP `membershipStatusCheck` parity),
+ * computes per-item & global membership discounts, displays transparent original vs.
+ * discounted pricing, validates Sankalpam details, reserves temporary slots,
+ * and mounts `HostedPaymentModal` for PCI-compliant gateway tokenization.
+ *
+ * Strict Tech Stack: Pure ES6+ JavaScript (NO TypeScript), Tailwind CSS, Zustand, TanStack Query.
+ * Aligns strictly with Non-Negotiables #1, #2, #3, #4, and #5.
+ */
+
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../../store/useCartStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import { useDevoteeProfile } from "../../hooks/queries/Profile/useDevoteeProfile";
+import { useGetCumulativeAmount } from "../../hooks/queries/Dashboard/useDashboard";
+import { useMembershipSettings } from "../../hooks/queries/Membership/useMembershipSettings";
 import { useCheckout } from "../../hooks/queries/Checkout/checkoutApi";
+import {
+  evaluateMembershipStatus,
+  calculateCartDiscounts,
+} from "../../utils/membershipDiscount";
 import { FamilySankalpamForm } from "../../components/profile/FamilySankalpamForm";
 import { HostedPaymentModal } from "../../components/checkout/HostedPaymentModal";
 import { decodeBase64 } from "../../utils/base64";
@@ -21,6 +40,8 @@ import {
   ArrowRight,
   AlertCircle,
   Loader2,
+  BadgeCheck,
+  Tag,
 } from "lucide-react";
 
 const QUICK_DONATIONS = [11, 21, 51, 101];
@@ -32,15 +53,16 @@ const QUICK_DONATIONS = [11, 21, 51, 101];
 export const Checkout = () => {
   const navigate = useNavigate();
 
-  // ================= GLOBAL CART & UI STORE =================
+  // ================= GLOBAL AUTH & CART STORE =================
+  const user = useAuthStore((state) => state.user);
+  const memberId = user?._id || user?.id || user?.memberId || "";
+
   const items = useCartStore((state) => state.items || []);
   const totalCount = useCartStore((state) => state.totalCount || 0);
-  const subtotalAmount = useCartStore((state) => state.subtotalAmount || 0);
   const generalDonation = useCartStore((state) => state.generalDonation || 0);
   const acharyaSambhavana = useCartStore(
     (state) => state.acharyaSambhavana || 0,
   );
-  const grandTotalAmount = useCartStore((state) => state.grandTotalAmount || 0);
   const currencySymbol = useCartStore((state) => state.currencySymbol || "$");
   const removeItem = useCartStore((state) => state.removeItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
@@ -65,6 +87,13 @@ export const Checkout = () => {
     saveSankalpam,
   } = useDevoteeProfile();
 
+  // ================= MEMBERSHIP & CUMULATIVE SPENDING QUERIES =================
+  const { data: cumulativeData } = useGetCumulativeAmount(memberId);
+  const {
+    membershipDiscount: settingsDiscountValue,
+    discountType: settingsDiscountType,
+  } = useMembershipSettings();
+
   // ================= CHECKOUT MUTATION HOOKS =================
   const {
     checkSareeAvailability,
@@ -81,6 +110,42 @@ export const Checkout = () => {
   // Hosted Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeInvoiceNumber, setActiveInvoiceNumber] = useState("");
+
+  // ================= MEMBERSHIP ELIGIBILITY & DISCOUNT CALCULATION =================
+  const membershipEvaluation = useMemo(() => {
+    const cumulativeTotal = Number(cumulativeData?.totalAmount ?? 0);
+    return evaluateMembershipStatus(devoteeProfile, user, cumulativeTotal);
+  }, [devoteeProfile, user, cumulativeData]);
+
+  const discountSummary = useMemo(() => {
+    return calculateCartDiscounts({
+      items,
+      isMemberActive: membershipEvaluation.isActive,
+      membershipSettings: {
+        membershipDiscount: settingsDiscountValue,
+        discountType: settingsDiscountType,
+      },
+    });
+  }, [
+    items,
+    membershipEvaluation.isActive,
+    settingsDiscountValue,
+    settingsDiscountType,
+  ]);
+
+  const {
+    processedItems,
+    subtotalAmount: originalSubtotal,
+    totalMembershipDiscount,
+    grandTotalAmount: discountedOfferingsSubtotal,
+  } = discountSummary;
+
+  const finalPayableAmount = Math.max(
+    0,
+    discountedOfferingsSubtotal +
+      Number(generalDonation || 0) +
+      Number(acharyaSambhavana || 0),
+  );
 
   // Check if Sankalpam is required by any cart item
   const isSankalpamRequired = useMemo(() => {
@@ -165,7 +230,7 @@ export const Checkout = () => {
       }
 
       // Step 3: Check Saree Availability if cart contains saree items
-      const hasSareeItem = items.some(
+      const hasSareeItem = processedItems.some(
         (i) =>
           (i.itemType || "").toUpperCase() === "SAREE" ||
           (i.category || "").toUpperCase() === "SAREE",
@@ -184,12 +249,12 @@ export const Checkout = () => {
         }
       }
 
-      // Step 4: Reserve Temporary Booking Slot (addServiceCartTemp)
+      // Step 4: Reserve Temporary Booking Slot with Discounted Line Items
       const invoiceNumber = String(Date.now());
       const tempHoldResponse = await addServiceCartTemp({
         invoiceNum: invoiceNumber,
-        totalAmount: grandTotalAmount,
-        cartItems: items,
+        totalAmount: finalPayableAmount,
+        cartItems: processedItems,
         eventDetail: {},
         serviceDetail: { notes },
       });
@@ -226,7 +291,11 @@ export const Checkout = () => {
   const handlePaymentSuccess = (finalizedResult) => {
     setIsPaymentModalOpen(false);
 
-    // Route cleanly to the post-payment confirmation & receipt view
+    const receiptItems = processedItems.map((item) => ({
+      ...item,
+      amount: item.lineFinalTotal,
+    }));
+
     navigate("/checkout/success", {
       state: {
         invoiceNo: finalizedResult?.invoiceNo || activeInvoiceNumber,
@@ -234,9 +303,9 @@ export const Checkout = () => {
           finalizedResult?.transactionStatus?.transaction_id ||
           activeInvoiceNumber,
         paymentSource:
-          finalizedResult?.addToCart?.paymentSource || "ONLINE_PAYMENT",
-        totalAmount: grandTotalAmount,
-        items,
+          finalizedResult?.addToCart?.paymentSource || "MPI_CARD_NOT_PRESENT",
+        totalAmount: finalPayableAmount,
+        items: receiptItems,
         devoteeName:
           devoteeProfile?.refDataName ||
           `${sankalpamData.firstName || ""} ${sankalpamData.lastName || ""}`.trim() ||
@@ -246,6 +315,7 @@ export const Checkout = () => {
           : "",
         acharyaSambhavana,
         generalDonation,
+        membershipDiscount: totalMembershipDiscount,
       },
       replace: true,
     });
@@ -317,6 +387,37 @@ export const Checkout = () => {
             Continue Browsing ✕
           </button>
         </header>
+
+        {/* Active Membership Benefit Banner */}
+        {membershipEvaluation.isActive && (
+          <div
+            role="status"
+            className="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <BadgeCheck className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-emerald-950">
+                  Active{" "}
+                  {membershipEvaluation.membershipName || "Temple Membership"}{" "}
+                  Detected
+                </p>
+                <p className="text-[11px] text-emerald-800">
+                  Member discounts are automatically applied to eligible temple
+                  services and offerings below.
+                </p>
+              </div>
+            </div>
+            {totalMembershipDiscount > 0 && (
+              <span className="self-start sm:self-center px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-extrabold tracking-wide shadow-2xs">
+                You Save {currencySymbol}
+                {totalMembershipDiscount.toFixed(2)}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Global Error Notice */}
         {errorMessage && (
@@ -415,13 +516,13 @@ export const Checkout = () => {
                 </button>
               </div>
 
-              {/* Items List */}
+              {/* Items List with Original vs. Member Discounted Breakdown */}
               <div className="divide-y divide-gray-100" role="list">
-                {items.map((item) => {
+                {processedItems.map((item) => {
                   const itemId = item.id || item._id;
                   const qty = Number(item.quantity) || 1;
-                  const unitPrice = Number(item.amount || item.unitPrice || 0);
-                  const itemTotal = unitPrice * qty;
+                  const hasDiscount =
+                    item.isDiscountApplied && item.lineDiscountTotal > 0;
 
                   return (
                     <div
@@ -430,12 +531,36 @@ export const Checkout = () => {
                       role="listitem"
                     >
                       <div className="flex-1 space-y-1.5">
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/60 uppercase tracking-wide">
-                          {item.category || item.itemType || "SEVA"}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/60 uppercase tracking-wide">
+                            {item.category || item.itemType || "SEVA"}
+                          </span>
+                          {hasDiscount && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">
+                              <Tag className="w-2.5 h-2.5" aria-hidden="true" />
+                              Member Discount (-{currencySymbol}
+                              {item.lineDiscountTotal.toFixed(2)})
+                            </span>
+                          )}
+                        </div>
+
                         <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
                           {item.name || item.title || item.serviceName}
                         </h3>
+
+                        {/* Unit Price Breakdown */}
+                        <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2">
+                          <span>
+                            Unit Price: {currencySymbol}
+                            {item.originalUnitPrice.toFixed(2)}
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-emerald-700 font-semibold">
+                              → Member Price: {currencySymbol}
+                              {item.unitPrice.toFixed(2)} / unit
+                            </span>
+                          )}
+                        </div>
 
                         {(item.startDate ||
                           item.selectedDate ||
@@ -498,10 +623,16 @@ export const Checkout = () => {
                           </button>
                         </div>
 
-                        <div className="text-right min-w-[75px]">
+                        <div className="text-right min-w-[85px] flex flex-col items-end">
+                          {hasDiscount && (
+                            <span className="text-xs text-gray-400 line-through">
+                              {currencySymbol}
+                              {item.lineOriginalTotal.toFixed(2)}
+                            </span>
+                          )}
                           <span className="text-sm sm:text-base font-serif font-bold text-gray-900">
                             {currencySymbol}
-                            {itemTotal.toFixed(2)}
+                            {item.lineFinalTotal.toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -510,14 +641,27 @@ export const Checkout = () => {
                 })}
               </div>
 
-              <div className="pt-4 mt-2 border-t border-gray-100 flex items-center justify-between text-sm">
-                <span className="text-gray-500 font-medium">
-                  Items Subtotal
-                </span>
-                <span className="font-bold text-gray-900">
-                  {currencySymbol}
-                  {Number(subtotalAmount).toFixed(2)}
-                </span>
+              <div className="pt-4 mt-2 border-t border-gray-100 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 font-medium">
+                    Original Offerings Subtotal
+                  </span>
+                  <span className="font-semibold text-gray-800">
+                    {currencySymbol}
+                    {Number(originalSubtotal).toFixed(2)}
+                  </span>
+                </div>
+                {totalMembershipDiscount > 0 && (
+                  <div className="flex items-center justify-between text-emerald-700 text-xs sm:text-sm">
+                    <span className="font-semibold">
+                      Membership Discount Applied
+                    </span>
+                    <span className="font-bold">
+                      -{currencySymbol}
+                      {Number(totalMembershipDiscount).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -568,12 +712,20 @@ export const Checkout = () => {
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-1">
                   <span className="text-[11px] font-semibold text-gray-700 block">
                     {decodeBase64(devoteeProfile?.phone) || ""}
                   </span>
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                    Signed In
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${
+                      membershipEvaluation.isActive
+                        ? "text-emerald-800 bg-emerald-100"
+                        : "text-emerald-700 bg-emerald-50"
+                    }`}
+                  >
+                    {membershipEvaluation.isActive
+                      ? `${membershipEvaluation.membershipType || "ACTIVE"} MEMBER`
+                      : "Signed In"}
                   </span>
                 </div>
               </div>
@@ -628,15 +780,35 @@ export const Checkout = () => {
                 </div>
               </div>
 
-              {/* Amount Breakdown */}
+              {/* Complete Price & Discount Breakdown */}
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>Pooja Offerings Subtotal</span>
+                  <span>Offerings Subtotal (Original)</span>
                   <span>
                     {currencySymbol}
-                    {Number(subtotalAmount).toFixed(2)}
+                    {Number(originalSubtotal).toFixed(2)}
                   </span>
                 </div>
+
+                {totalMembershipDiscount > 0 && (
+                  <>
+                    <div className="flex justify-between text-xs text-emerald-700 font-semibold">
+                      <span>Membership Discount</span>
+                      <span>
+                        -{currencySymbol}
+                        {Number(totalMembershipDiscount).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-700 font-semibold pt-1 border-t border-dashed border-gray-200">
+                      <span>Offerings After Discount</span>
+                      <span>
+                        {currencySymbol}
+                        {Number(discountedOfferingsSubtotal).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
                 {generalDonation > 0 && (
                   <div className="flex justify-between text-xs text-emerald-700 font-semibold">
                     <span>Temple Support Donation</span>
@@ -646,6 +818,7 @@ export const Checkout = () => {
                     </span>
                   </div>
                 )}
+
                 {acharyaSambhavana > 0 && (
                   <div className="flex justify-between text-xs text-amber-800 font-semibold">
                     <span>Acharya Sambhavana</span>
@@ -655,13 +828,14 @@ export const Checkout = () => {
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-baseline pt-2 border-t border-gray-100">
+
+                <div className="flex justify-between items-baseline pt-2.5 border-t border-gray-100">
                   <span className="text-sm font-bold text-gray-900">
                     Final Amount to Pay:
                   </span>
                   <span className="text-2xl sm:text-3xl font-serif font-extrabold text-[#900000]">
                     {currencySymbol}
-                    {Number(grandTotalAmount).toFixed(2)}
+                    {Number(finalPayableAmount).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -701,7 +875,7 @@ export const Checkout = () => {
                     <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>
                       Proceed to Pay {currencySymbol}
-                      {Number(grandTotalAmount).toFixed(2)}
+                      {Number(finalPayableAmount).toFixed(2)}
                     </span>
                   </>
                 )}
@@ -719,8 +893,12 @@ export const Checkout = () => {
         <HostedPaymentModal
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
-          payableAmount={grandTotalAmount}
+          payableAmount={finalPayableAmount}
           invoiceNumber={activeInvoiceNumber}
+          cartItems={processedItems}
+          devoteeProfile={devoteeProfile}
+          acharyaSambhavana={acharyaSambhavana}
+          generalDonation={generalDonation}
           onSuccess={handlePaymentSuccess}
         />
       </div>
