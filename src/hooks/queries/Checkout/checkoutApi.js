@@ -1,14 +1,27 @@
+/**
+ * @file src/hooks/queries/Checkout/checkoutApi.js
+ * @description Centralized TanStack Query mutations for the Checkout & Payment pipeline:
+ * 1. `useCheckSareeAvailability` - Verifies deity saree slot availability.
+ * 2. `useAddServiceCartTemp` - Locks temporary cart reservation in MongoDB.
+ * 3. `useProcessMpiPayment` - Charges tokenized BridgePay/MPI card via `mpiCardPayment` / `mpiCardPaymentTest`.
+ * 4. `useProcessNmiPayment` - Charges tokenized NMI card via `NMI_Payment/makePayment`.
+ * 5. `useFinalizeOrder` - Records completed order (`Common/AddToCart`) and issues official receipt (`Common/updateTransactionStatus`).
+ *
+ */
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
+import { ENV_CONFIG } from '../../../config/envConfig';
 import { ENDPOINTS } from '../../../constants/apiConstants';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useCartStore } from '../../../store/useCartStore';
 
-
-
-const transformCartItemsForServer = (items) => {
-    if (!Array.isArray(items)) return [];
-
+/**
+ * Formats current local date (MM/DD/YYYY) and time (hh:mm AM/PM) for MongoDB records.
+ *
+ * @returns {{ cartCreDate: string, cartCreTime: string }}
+ */
+const getFormattedCartTimestamp = () => {
     const now = new Date();
     const cartCreDate = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
     const hours = now.getHours();
@@ -16,40 +29,63 @@ const transformCartItemsForServer = (items) => {
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const cartCreTime = `${String(hours % 12 || 12).padStart(2, '0')}:${minutes} ${ampm}`;
 
-    return items.map(item => ({
-        _id: item.id || '',
-        ServiceId: item.id || '',
-        serviceName: item.refDataName || '',
-        serviceCategory: item.serviceCategoryTypes || '',
-        serviceType: item.serviceTypes || '',
-        serviceAmount: Number(item.amount || 0),
-        startDate: item.startDate || '',
-        qty: Number(item.quantity || 1),
-        time: item.time || item.startTime || '',
-        bookingType: item.bookingType || '',
-        serviceAddress: item.serviceAddress || '',
-        day: item?.dayTypes || '',
-        cartCreDate,
-        cartCreTime,
-        isServicePaid: item.isServicePaid ? 1 : 0,
-        serviceDesc: item.description || '',
-        serviceOccurrencesNo: item.occurrences || 1,
-        oldServiceAmount: Number(item.oldServiceAmount || item.amount || 0),
-        discountedAmount: Number(item.discountedAmount || 0),
-        fullPackage: item.fullPackage ? 1 : 0,
-        BookingLimitPerDay: Number(item.bookingLimitPerDay || item.BookingLimitPerDay || 0),
-    }));
+    return { cartCreDate, cartCreTime };
+};
+
+/**
+ * Normalizes cart items (including membership-discounted prices) into the server line-item contract.
+ *
+ * @param {Array<Object>} items
+ * @returns {Array<Object>}
+ */
+export const transformCartItemsForServer = (items) => {
+    if (!Array.isArray(items)) return [];
+
+    const { cartCreDate, cartCreTime } = getFormattedCartTimestamp();
+
+    return items.map((item) => {
+        const qty = Math.max(1, Number(item.quantity || 1));
+        const originalUnit = Number(item.oldServiceAmount ?? item.originalUnitPrice ?? item.amount ?? 0);
+        const unitDiscount = Number(item.discountedAmount ?? 0);
+        const finalUnit = Number(
+            item.unitPrice !== undefined ? item.unitPrice : Math.max(0, originalUnit - unitDiscount)
+        );
+
+        return {
+            _id: item.id || item._id || '',
+            ServiceId: item.serviceId || item.id || item._id || '',
+            serviceName: item.refDataName || item.title || item.name || '',
+            serviceCategory: item.serviceCategoryTypes || item.category || '',
+            serviceType: item.serviceTypes || '',
+            serviceAmount: finalUnit,
+            startDate: item.startDate || (Array.isArray(item.selectedDates) ? item.selectedDates[0] || '' : ''),
+            qty,
+            time: item.time || item.selectedTime || item.startTime || '',
+            bookingType: item.bookingType || '',
+            serviceAddress: item.serviceAddress || '',
+            day: item?.dayTypes || '',
+            cartCreDate,
+            cartCreTime,
+            isServicePaid: item.isServicePaid ? 1 : 0,
+            serviceDesc: item.description || '',
+            serviceOccurrencesNo: item.occurrences || 1,
+            oldServiceAmount: originalUnit,
+            discountedAmount: unitDiscount,
+            fullPackage: item.fullPackage ? 1 : 0,
+            BookingLimitPerDay: Number(item.bookingLimitPerDay || item.BookingLimitPerDay || 0),
+        };
+    });
 };
 
 export const useCheckSareeAvailability = () => {
     return useMutation({
-        mutationFn: async ({ name = 'saree' } = {}, { signal }) => {
+        mutationFn: async ({ name = 'saree' } = {}, { signal } = {}) => {
             const response = await apiClient.post(
                 ENDPOINTS.CHECK_SAREE_AVAILABILITY,
                 { name },
                 { signal }
             );
-            return response;
+            return response?.data || response;
         },
     });
 };
@@ -58,15 +94,9 @@ export const useAddServiceCartTemp = () => {
     const user = useAuthStore((state) => state.user);
 
     return useMutation({
-        mutationFn: async ({ invoiceNum, totalAmount, cartItems, eventDetail = {}, serviceDetail = {} }, { signal }) => {
+        mutationFn: async ({ invoiceNum, totalAmount, cartItems, eventDetail = {}, serviceDetail = {} }, { signal } = {}) => {
             const formattedCardData = transformCartItemsForServer(cartItems);
-
-            const now = new Date();
-            const cartCreDate = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
-            const hours = now.getHours();
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const cartCreTime = `${String(hours % 12 || 12).padStart(2, '0')}:${minutes} ${ampm}`;
+            const { cartCreDate, cartCreTime } = getFormattedCartTimestamp();
 
             const memberId = user?._id || user?.id || user?.memberId || '';
             const memberName = user?.refDataName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Devotee';
@@ -81,7 +111,9 @@ export const useAddServiceCartTemp = () => {
                 InvNumber: String(invoiceNum),
                 totalAmount: Number(totalAmount),
                 TerminalId: 'WEBSITE',
-                paymentSource: 'WEBSITE_ONLINE',
+                clientId: ENV_CONFIG.CLIENT_ID,
+                productId: ENV_CONFIG.PRODUCT_ID,
+                paymentSource: 'MPI_CARD_NOT_PRESENT',
                 Source: 'WEBSITE',
                 cartCreDate,
                 cartCreTime,
@@ -98,35 +130,37 @@ export const useAddServiceCartTemp = () => {
                 { signal }
             );
 
-            return response;
+            return response?.data || response;
         },
     });
 };
 
 export const useProcessMpiPayment = () => {
     return useMutation({
-        mutationFn: async ({ token, totalAmount, name, address, zipcode, cartItems, isTest = false }, { signal }) => {
-            const endpoint = isTest ? ENDPOINTS.MPI_PAY_NOW_TEST : ENDPOINTS.MPI_PAY_NOW;
-            const formattedCardData = transformCartItemsForServer(cartItems);
+        mutationFn: async ({ token, totalAmount, name, address = '', zipcode, invoiceNum, isTest = true }, { signal } = {}) => {
+            const roundedAmount = Math.round((Number(totalAmount) || 0) * 100) / 100;
+            const amountInCents = Math.round(roundedAmount * 100);
+            const endpoint = isTest ? ENDPOINTS.MPI_CARD_PAYMENT_TEST : ENDPOINTS.MPI_CARD_PAYMENT_LIVE;
 
             const payload = {
                 token,
-                totolAmt: Number(totalAmount),
+                amount: isTest ? 500 : amountInCents,
                 name: String(name || '').trim(),
                 address: String(address || '').trim(),
                 zipcode: String(zipcode || '').trim(),
-                cart_data: formattedCardData,
+                clientId: ENV_CONFIG.CLIENT_ID,
+                InvoiceNum: invoiceNum || Date.now(),
             };
 
             const response = await apiClient.post(endpoint, payload, { signal });
-            return response;
+            return response?.data || response;
         },
     });
 };
 
 export const useProcessNmiPayment = () => {
     return useMutation({
-        mutationFn: async ({ token, totalAmount, name, email, zipcode, cartItems }, { signal }) => {
+        mutationFn: async ({ token, totalAmount, name, email, zipcode, cartItems }, { signal } = {}) => {
             const formattedCardData = transformCartItemsForServer(cartItems);
 
             const payload = {
@@ -135,18 +169,29 @@ export const useProcessNmiPayment = () => {
                 name: String(name || '').trim(),
                 email: String(email || '').trim(),
                 zipcode: String(zipcode || '').trim(),
+                clientId: ENV_CONFIG.CLIENT_ID,
                 cart_data: formattedCardData,
             };
 
             const response = await apiClient.post(ENDPOINTS.NMI_MAKE_PAYMENT, payload, { signal });
-            return response;
+            return response?.data || response;
         },
     });
+};
+
+const mapItemTypeToCartCategory = (itemType) => {
+    const type = String(itemType || 'SERVICE').trim().toUpperCase();
+    if (type === 'SPONSORSHIP') return 'sponsorship';
+    if (type === 'DONATION') return 'donation';
+    if (type === 'EVENT') return 'event';
+    if (type === 'SAREE') return 'saree';
+    return 'services';
 };
 
 export const useFinalizeOrder = () => {
     const queryClient = useQueryClient();
     const clearCart = useCartStore((state) => state.clearCart);
+    const user = useAuthStore((state) => state.user);
 
     return useMutation({
         mutationFn: async (
@@ -158,63 +203,106 @@ export const useFinalizeOrder = () => {
                 totalPrice,
                 mpiInvNumber,
                 transactionId,
-                paymentDescription,
                 cartItems = [],
             },
-            { signal }
+            { signal } = {}
         ) => {
-            const serviceItems = cartItems.filter((i) => !i.itemType || i.itemType === 'SERVICE');
-            const sponsorItems = cartItems.filter((i) => i.itemType === 'SPONSORSHIP');
-            const eventItems = cartItems.filter((i) => i.itemType === 'EVENT');
-            const sareeItems = cartItems.filter((i) => i.itemType === 'SAREE');
-            const donationItems = cartItems.filter((i) => i.itemType === 'DONATION');
+            const { cartCreDate, cartCreTime } = getFormattedCartTimestamp();
 
-            // Step 1: Record Order in AddToCart
-            const addToCartPayload = {
-                status,
+            const memberId = user?._id || user?.id || user?.memberId || '';
+            const memberName =
+                user?.refDataName ||
+                `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+                'Devotee';
+            const prsnEmail = user?.email || '';
+            const prsnPhone = user?.phone || '';
+
+            const normalizedData = transformCartItemsForServer(cartItems).map((srvItem, idx) => ({
+                ...srvItem,
+                serviceAmount: String(srvItem.serviceAmount ?? 0),
+                oldServiceAmount: String(srvItem.oldServiceAmount ?? srvItem.serviceAmount ?? 0),
+                discountedAmount: Number(srvItem.discountedAmount ?? 0),
+                cartCategory: mapItemTypeToCartCategory(cartItems[idx]?.itemType),
+            }));
+
+            // Step 1: Record Completed Order via `api/bookingService/addServiceCart`
+            const addServiceCartPayload = {
+                productId: ENV_CONFIG.PRODUCT_ID,
+                clientId: ENV_CONFIG.CLIENT_ID,
+                memberId,
+                memberName,
+                prsnEmail,
+                prsnPhone,
+                data: normalizedData,
+                eventDetail: {},
+                paymentType: 'CREDIT CARD',
                 paymentSource,
-                acharya_sambhavana: Number(acharyaSambhavana),
-                general_donation: Number(generalDonation),
-                totalPrice: Number(totalPrice),
+                etKitchenTIp: '0',
+                attemptType: status,
+                cartCreDate,
+                cartCreTime,
+                bankName: '',
+                chequeNo: '',
+                chequeAmount: '',
+                chequeDate: '',
+                acharyasanbhavana: Number(acharyaSambhavana || 0),
+                generaldonations: Number(generalDonation || 0),
                 mpiInvNumber: String(mpiInvNumber),
-                transaction_id: transactionId,
-                service_cart_items: serviceItems,
-                sponser_cart_items: sponsorItems,
-                event_cart_items: eventItems,
-                saree_cart_items: sareeItems,
-                donation_cart_items: donationItems,
+                totalAmount: Number(totalPrice),
+                transactionId: String(transactionId || ''),
+                paymentStatus: status,
+                source: 'WEBSITE',
+                creditCardRemark: '',
             };
 
             const addToCartResponse = await apiClient.post(
                 ENDPOINTS.ADD_TO_CART,
-                addToCartPayload,
+                addServiceCartPayload,
                 { signal }
             );
+            const unpackedAddToCart = addToCartResponse?.data || addToCartResponse;
+            const cartRecord = Array.isArray(unpackedAddToCart)
+                ? unpackedAddToCart[0]
+                : unpackedAddToCart;
+
+            console.log("ADD_TO_CART Response Full Object:", unpackedAddToCart);
 
             // Step 2: Finalize Transaction Status & Issue Official Invoice
+            // const updateStatusPayload = {
+            //     status,
+            //     transactionId: transactionId,
+            //     paymentDescription,
+            // };
+
             const updateStatusPayload = {
-                status,
-                transaction_id: transactionId,
-                paymentDescription,
+                productId: ENV_CONFIG.PRODUCT_ID,
+                clientId: ENV_CONFIG.CLIENT_ID,
+                _id: cartRecord?._id || cartRecord?.id || '',
+                invoiceNo: String(cartRecord?.invoiceNo || mpiInvNumber),
+                paymentStatus: status,
+                transactionId: transactionId,
             };
 
             const updateStatusResponse = await apiClient.post(
                 ENDPOINTS.UPDATE_TRANSACTION_STATUS,
                 updateStatusPayload,
-                { signal }
+                { signal, pre: false }
             );
+            const unpackedStatus = updateStatusResponse?.data || updateStatusResponse;
 
             return {
-                addToCart: addToCartResponse,
-                transactionStatus: updateStatusResponse,
-                invoiceNo: updateStatusResponse?.envoiceNo || updateStatusResponse?.invoiceNo || mpiInvNumber,
+                addToCart: unpackedAddToCart,
+                transactionStatus: unpackedStatus,
+                invoiceNo: unpackedStatus?.envoiceNo || unpackedStatus?.invoiceNo || mpiInvNumber,
             };
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (_, variables) => {
             if (variables.status === 'COMPLETED') {
                 clearCart();
                 queryClient.invalidateQueries({ queryKey: ['cartSession'] });
                 queryClient.invalidateQueries({ queryKey: ['devoteeBookings'] });
+                queryClient.invalidateQueries({ queryKey: ['cumulativeAmount'] });
+                queryClient.invalidateQueries({ queryKey: ['devoteeDetails'] });
             }
         },
     });
@@ -224,13 +312,13 @@ export const useRemoveExpiredServices = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ expireServices = [] }, { signal }) => {
+        mutationFn: async ({ expireServices = [] }, { signal } = {}) => {
             const response = await apiClient.post(
                 ENDPOINTS.REMOVE_EXPIRED_SERVICES,
                 { expireServices },
                 { signal }
             );
-            return response;
+            return response?.data || response;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cartSession'] });
