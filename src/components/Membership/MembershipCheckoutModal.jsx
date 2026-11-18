@@ -17,13 +17,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
-import { X, Lock, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
+import { X, Lock, Loader2, AlertCircle } from "lucide-react";
 import { usePaymentGateway } from "../../hooks/queries/Common/usePaymentGateway";
 import { useGetDevoteeDetails } from "../../hooks/queries/Profile/useDevoteeProfile";
 import { useEnrollMembership } from "../../hooks/queries/Membership/useMembershipSettings";
 import { useAuthStore } from "../../store/useAuthStore";
-import { decodeBase64 } from "../../utils/base64";
 import { APP_COLORS } from "../../constants/appColors";
+import logo from "../../assets/logo.png";
 
 /**
  * Required CSS rules read by BridgePay's `tokenPay.js` when `useStyles: false` is configured.
@@ -91,8 +91,6 @@ export const MembershipCheckoutModal = ({
 
   // 4. Local Form Override States (User edits take precedence; otherwise pre-filled from API)
   const [nameOverride, setNameOverride] = useState(null);
-  const [emailOverride, setEmailOverride] = useState(null);
-  const [phoneOverride, setPhoneOverride] = useState(null);
   const [zipOverride, setZipOverride] = useState(null);
 
   const [isTokenizing, setIsTokenizing] = useState(false);
@@ -108,14 +106,6 @@ export const MembershipCheckoutModal = ({
     user?.name ||
     "";
 
-  const resolvedProfileEmail = devoteeProfile?.email
-    ? decodeBase64(devoteeProfile.email)
-    : user?.email || "";
-
-  const resolvedProfilePhone = devoteeProfile?.phone
-    ? decodeBase64(devoteeProfile.phone)
-    : user?.phone || "";
-
   const resolvedProfileZip =
     devoteeProfile?.zipCode || devoteeProfile?.zip || user?.zip || "";
 
@@ -128,8 +118,6 @@ export const MembershipCheckoutModal = ({
     .trim();
 
   const nameOnCard = nameOverride ?? resolvedProfileName;
-  const email = emailOverride ?? resolvedProfileEmail;
-  const phone = phoneOverride ?? resolvedProfilePhone;
   const zipCode = zipOverride ?? resolvedProfileZip;
 
   const isBusy = isTokenizing || enrollMembershipMutation.isPending;
@@ -267,8 +255,6 @@ export const MembershipCheckoutModal = ({
             devoteeInfo: {
               memberId: devoteeProfile?._id || memberId,
               name: nameOnCard.trim(),
-              email: email.trim(),
-              mobile: phone.trim(),
             },
             billingAddress: resolvedBillingAddress,
             zipcode: zipCode.trim(),
@@ -279,8 +265,6 @@ export const MembershipCheckoutModal = ({
             onSuccess({
               ...enrollmentResult,
               name: nameOnCard.trim(),
-              email: email.trim(),
-              phone: phone.trim(),
               zipcode: zipCode.trim(),
               membershipPlan,
             });
@@ -338,16 +322,20 @@ export const MembershipCheckoutModal = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        <div className="p-4 overflow-y-auto space-y-4">
           {/* Temple Emblem */}
-          <div className="text-center space-y-1">
+          <div className="flex items-center justify-center space-x-2 w-full">
             <div
-              className="w-14 h-14 rounded-full bg-amber-50 border border-amber-300 text-[#900000] flex items-center justify-center mx-auto text-2xl font-serif font-bold shadow-2xs"
+              className="w-15 h-15 rounded-full bg-amber-50 border border-amber-300 text-[#900000] flex items-center justify-center shrink-0 shadow-2xs overflow-hidden"
               aria-hidden="true"
             >
-              ॐ
+              <img
+                src={logo}
+                alt=""
+                className="w-12 h-12 object-contain shrink-0"
+              />
             </div>
-            <p className="text-xs font-bold uppercase tracking-wider text-stone-700">
+            <p className="text-xl font-bold uppercase tracking-wider text-stone-700">
               Hindu Temple of Kentucky
             </p>
           </div>
@@ -436,101 +424,55 @@ export const MembershipCheckoutModal = ({
                 id="errorMessage"
                 className="text-xs text-red-600 font-medium min-h-[16px]"
               />
-
-              <div className="flex items-center justify-between text-[11px] text-stone-500 px-1">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  PCI-DSS Encrypted
-                </span>
-                <span className="font-mono font-bold text-amber-700 uppercase">
-                  {activeGateway || "MPI"} GATEWAY
-                </span>
-              </div>
             </div>
 
             {/* Devotee / Billing Details (Pre-filled from getDevoteeDetailsWeb if available, else empty) */}
-            <div className="space-y-3 pt-1">
-              <div>
-                <label
-                  htmlFor="modal-name-on-card"
-                  className="block text-sm font-bold text-stone-900 mb-1"
-                >
-                  Name on Card <span className="text-red-600">*</span>
-                </label>
-                <input
-                  id="modal-name-on-card"
-                  type="text"
-                  required
-                  value={nameOnCard}
-                  onChange={(e) => setNameOverride(e.target.value)}
-                  placeholder={
-                    isDevoteeLoading ? "Loading..." : "Enter Name on Card"
-                  }
-                  disabled={isBusy}
-                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-stone-300 rounded-md focus:border-[#900000] outline-none"
-                />
-              </div>
-
+            <div className="space-y-1 pt-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label
-                    htmlFor="modal-email"
-                    className="block text-xs font-bold text-stone-700 mb-1"
+                    htmlFor="modal-name-on-card"
+                    className="block text-sm font-bold text-stone-900 mb-1"
                   >
-                    Email
+                    Name on Card <span className="text-red-600">*</span>
                   </label>
                   <input
-                    id="modal-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmailOverride(e.target.value)}
-                    placeholder="Enter Email"
+                    id="modal-name-on-card"
+                    type="text"
+                    required
+                    value={nameOnCard}
+                    onChange={(e) => setNameOverride(e.target.value)}
+                    placeholder={
+                      isDevoteeLoading ? "Loading..." : "Enter Name on Card"
+                    }
                     disabled={isBusy}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-stone-300 rounded-md focus:border-[#900000] outline-none"
+                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-stone-300 rounded-md focus:border-[#900000] outline-none"
                   />
                 </div>
 
                 <div>
                   <label
-                    htmlFor="modal-phone"
-                    className="block text-xs font-bold text-stone-700 mb-1"
+                    htmlFor="modal-zipcode"
+                    className="block text-sm font-bold text-stone-900 mb-1"
                   >
-                    Phone
+                    ZIP Code <span className="text-red-600">*</span>
                   </label>
                   <input
-                    id="modal-phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhoneOverride(e.target.value)}
-                    placeholder="Enter Phone"
+                    id="modal-zipcode"
+                    type="text"
+                    required
+                    maxLength={5}
+                    value={zipCode}
+                    onChange={(e) =>
+                      setZipOverride(
+                        e.target.value.replace(/\D/g, "").slice(0, 5),
+                      )
+                    }
+                    placeholder="Enter ZIP Code"
                     disabled={isBusy}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-stone-300 rounded-md focus:border-[#900000] outline-none"
+                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-stone-300 rounded-md focus:border-[#900000] outline-none"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="modal-zipcode"
-                  className="block text-sm font-bold text-stone-900 mb-1"
-                >
-                  ZIP Code <span className="text-red-600">*</span>
-                </label>
-                <input
-                  id="modal-zipcode"
-                  type="text"
-                  required
-                  maxLength={5}
-                  value={zipCode}
-                  onChange={(e) =>
-                    setZipOverride(
-                      e.target.value.replace(/\D/g, "").slice(0, 5),
-                    )
-                  }
-                  placeholder="Enter ZIP Code"
-                  disabled={isBusy}
-                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-stone-300 rounded-md focus:border-[#900000] outline-none"
-                />
               </div>
             </div>
 
