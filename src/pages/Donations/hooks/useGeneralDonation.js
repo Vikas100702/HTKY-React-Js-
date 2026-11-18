@@ -177,7 +177,7 @@ export const useGeneralDonation = () => {
         dateModal?.item?.refDataName || '',
         dateModal?.item?.serviceTypes || selectedCategory || '',
         isCustomSlotActive
-    );  
+    );
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -459,6 +459,15 @@ export const useGeneralDonation = () => {
 
     // Synchronized Checkbox Handler
     const handleCheckboxChange = (key, isChecked, item) => {
+        const isCustomAmount = item.parsedAmount <= 0;
+        const currentCustomAmount = parseFloat(customAmountMap[key] || 0);
+
+        // If flexible amount and the user has not entered an amount, do not allow it to be checked.
+        if (isChecked && isCustomAmount && (!currentCustomAmount || currentCustomAmount <= 0)) {
+            setWarningMessage('Amount Required: Please enter a valid offering amount before selecting this item.');
+            return;
+        }
+
         const isDtVisible = checkDateVisibility(item?.isDTVisible);
         const selectedDates = selectedDatesMap[key] || [];
 
@@ -489,6 +498,40 @@ export const useGeneralDonation = () => {
     };
 
     // Synchronized Custom Amount Handler
+    // const handleCustomAmountChange = (key, value) => {
+    //     const item = categoryDetails.find((cat) => cat.id === key);
+    //     if (!item) return;
+
+    //     const parsed = parseFloat(value);
+    //     setCustomAmountMap((prev) => ({ ...prev, [key]: value }));
+
+    //     if (!isNaN(parsed) && parsed > 0) {
+    //         const isDtVisible = checkDateVisibility(item.isDTVisible);
+    //         const selectedDates = selectedDatesMap[key] || [];
+
+    //         if (isDtVisible && selectedDates.length === 0) {
+    //             setWarningMessage('Date Required: Please select a date to proceed with this service.');
+    //             return;
+    //         }
+
+    //         setWarningMessage('');
+    //         addItemToGlobalCart({
+    //             id: item.id,
+    //             refDataName: item.refDataName,
+    //             serviceTypes: item.serviceTypes,
+    //             serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
+    //             amount: parsed,
+    //             quantity: categoryQuantitiesMap[key] || 1,
+    //             image: item.image,
+    //             selectedDates: selectedDatesMap[key] || [],
+    //             selectedTime: selectedTimeMap[key] || ''
+    //         });
+    //     } else {
+    //         removeItemFromGlobalCart(key);
+    //     }
+    // };
+
+    // Synchronized Custom Amount Handler (Amount enter karne par automatic tick nahi hoga)
     const handleCustomAmountChange = (key, value) => {
         const item = categoryDetails.find((cat) => cat.id === key);
         if (!item) return;
@@ -496,7 +539,17 @@ export const useGeneralDonation = () => {
         const parsed = parseFloat(value);
         setCustomAmountMap((prev) => ({ ...prev, [key]: value }));
 
-        if (!isNaN(parsed) && parsed > 0) {
+        // Agar user ne amount clear kar diya ya 0/invalid kar diya, aur item cart mein tha, toh remove kar dein
+        if (isNaN(parsed) || parsed <= 0) {
+            if (checkedCategoryMap[key]) {
+                removeItemFromGlobalCart(key);
+            }
+            return;
+        }
+
+        // Agar item pehle se checked/selected hai, toh cart mein uska amount live update karein.
+        // Agar checked nahi hai, toh checkbox automatically tick nahi hoga (user ko manually tick karna padega).
+        if (checkedCategoryMap[key]) {
             const isDtVisible = checkDateVisibility(item.isDTVisible);
             const selectedDates = selectedDatesMap[key] || [];
 
@@ -506,19 +559,13 @@ export const useGeneralDonation = () => {
             }
 
             setWarningMessage('');
-            addItemToGlobalCart({
-                id: item.id,
-                refDataName: item.refDataName,
-                serviceTypes: item.serviceTypes,
-                serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
-                amount: parsed,
-                quantity: categoryQuantitiesMap[key] || 1,
-                image: item.image,
-                selectedDates: selectedDatesMap[key] || [],
-                selectedTime: selectedTimeMap[key] || ''
-            });
-        } else {
-            removeItemFromGlobalCart(key);
+            const existing = cartItems.find((i) => i.id === key);
+            if (existing) {
+                addItemToGlobalCart({
+                    ...existing,
+                    amount: parsed
+                });
+            }
         }
     };
 
