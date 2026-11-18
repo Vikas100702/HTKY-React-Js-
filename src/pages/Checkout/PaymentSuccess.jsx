@@ -12,6 +12,7 @@ import { useEffect, useMemo } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCartStore } from "../../store/useCartStore";
+import logo from "../../assets/logo.png";
 import {
   CheckCircle2,
   Printer,
@@ -161,9 +162,11 @@ export const PaymentSuccess = () => {
           {/* Receipt Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-red-50 text-[#900000] rounded-2xl flex items-center justify-center text-2xl font-serif font-bold shrink-0">
-                ॐ
-              </div>
+              <img
+                src={logo}
+                alt=""
+                className="w-12 h-12 object-contain shrink-0"
+              />
               <div>
                 <h2 className="text-lg font-serif font-bold text-gray-900 leading-tight">
                   Hindu Temple of Kentucky (HTKY)
@@ -346,4 +349,3 @@ export const PaymentSuccess = () => {
 };
 
 export default PaymentSuccess;
-
