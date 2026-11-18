@@ -55,6 +55,7 @@ export const ENDPOINTS = Object.freeze({
     CHECK_SAREE_AVAILABILITY: 'Events/checkSareeAvailbility',
     GET_EVENT_CART_DETAIL: 'api/bookingService/getEventCartDetail',
     ADD_SERVICE_CART_TEMP: 'api/bookingService/addServiceCartTemp',
+    ADD_TO_CART: 'api/bookingService/addServiceCart',
     REMOVE_EXPIRED_SERVICES: 'common/removeExpiredServices',
     MPI_PAY_NOW: 'MPI_Payments/Paynow',
     MPI_PAY_NOW_TEST: 'MPI_Payments/PaynowTest',
@@ -62,8 +63,7 @@ export const ENDPOINTS = Object.freeze({
     MPI_CARD_PAYMENT_TEST: 'api/vaaptech/mpiCardPaymentTest',
     MPI_PAYMENT_BY_TOKEN_MOBILE: 'api/payment/mpiPaymentByTokenMobile',
     NMI_MAKE_PAYMENT: 'NMI_Payment/makePayment',
-    ADD_TO_CART: 'Common/AddToCart',
-    UPDATE_TRANSACTION_STATUS: 'Common/updateTransactionStatus',
+    UPDATE_TRANSACTION_STATUS: 'api/bookingService/updateTransactionStatus',
     ADD_MEMBERSHIP: 'api/home/addMemberShip',
     GET_CUMULATIVE_AMOUNT: 'api/users/getCumulativeAmount'
 });
