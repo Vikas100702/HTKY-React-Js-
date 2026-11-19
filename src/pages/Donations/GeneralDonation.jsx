@@ -33,7 +33,7 @@ export const GeneralDonation = () => {
     isLoading,
     hasError,
     searchQuery,
-      currencySymbol,
+    currencySymbol,
     checkedCategoryMap,
     categoryQuantitiesMap,
     customAmountMap,
