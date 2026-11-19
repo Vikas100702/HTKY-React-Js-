@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import {
   useGetServices,
   IN_TEMPLE_CATEGORY,
-} from "../../hooks/queries/Services/useGetServices";
+} from "../../hooks/queries/Services/Book_Services/useGetServices";
 import { useGetClientSettings } from "../../hooks/queries/Donations/useGetDonations";
 import { useServicesStore } from "../../store/useServicesStore";
 import { UniversalServiceCard } from "../../components/shared/UniversalServiceCard";
