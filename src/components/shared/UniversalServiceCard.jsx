@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useServicesStore } from "../../store/useServicesStore";
-import { useGetDieties } from "../../hooks/queries/Services/useGetDieties";
+import { useGetDieties } from "../../hooks/queries/Services/Book_Services/useGetDieties";
 import { useCartStore } from "../../store/useCartStore";
 import {
   checkIsServiceGreyScale,
@@ -12,7 +12,7 @@ import {
   fetchServiceAvailability,
   fetchTithiDates,
   IN_TEMPLE_CATEGORY,
-} from "../../hooks/queries/Services/useGetServices";
+} from "../../hooks/queries/Services/Book_Services/useGetServices";
 import { ServiceDatePickerModal } from "../services/ServiceDatePickerModal";
 import { ServiceTimePickerModal } from "../services/ServiceTimePickerModal";
 
@@ -239,10 +239,39 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       }
 
       // Add the item to the global cart store
+      // Flexible / Custom Amount validation check
       const finalPrice =
         parsedServiceAmount > 0
           ? parsedServiceAmount
           : parseFloat(customAmountMap[serviceKey] || 0);
+
+      if (isCustomAmount && (!Number.isFinite(finalPrice) || finalPrice <= 0)) {
+        showToast(
+          "Please enter a valid offering amount before selecting this item.",
+          "warning",
+        );
+        return;
+      }
+
+      const resolvedCategoryType =
+        service.serviceCategoryTypes ||
+        service.rawItem?.serviceCategoryTypes ||
+        "IN-TEMPLE";
+      const upperCat = String(resolvedCategoryType).toUpperCase();
+      const isSponsorshipItem = upperCat.includes("SPONSOR");
+      const isDonationItem = upperCat.includes("DONATION");
+
+      const resolvedDisplayCategory = isSponsorshipItem
+        ? "SPONSORSHIP"
+        : isDonationItem
+          ? String(service.serviceTypes || "RECURRING DONATIONS").toUpperCase()
+          : "SERVICE";
+
+      const resolvedItemType = isSponsorshipItem
+        ? "SPONSORSHIP"
+        : isDonationItem
+          ? "DONATION"
+          : "SERVICE";
 
       const cartPayload = {
         id: service.id,
@@ -251,13 +280,9 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         amount: finalPrice,
         quantity: quantity || 1,
         image: service.imageUrl || "",
-        itemType: "SERVICE",
-        serviceCategoryTypes:
-          service.serviceCategoryTypes ||
-          service.rawItem?.serviceCategoryTypes ||
-          "IN-TEMPLE",
-        serviceTypes:
-          service.serviceTypes || service.rawItem?.serviceTypes || "",
+        category: resolvedDisplayCategory,
+        itemType: resolvedItemType,
+        serviceCategoryTypes: resolvedCategoryType,
         bookingType: service.bookingType || service.rawItem?.bookingType || "",
         dayTypes: service?.dayTypes || service.rawItem?.dayTypes || "",
         selectedDates: selectedDates || [],
