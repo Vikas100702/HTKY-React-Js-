@@ -131,15 +131,44 @@ const MembershipPage = lazy(() =>
   })),
 );
 
+// Services Pages
+
 const ServicesPage = lazy(() =>
   import("./pages/Services/Services").then((m) => ({
     default: m.Services,
   })),
 );
 
+const SponsorshipsPage = lazy(() =>
+  import("./pages/Sponsorships/Sponsorships").then((m) => ({
+    default: m.Sponsorships,
+  })),
+);
+
+const SponsorshipsCategoryPage = lazy(() =>
+  import("./pages/Sponsorships/SponsorshipCategoryServices").then((m) => ({
+    default: m.SponsorshipCategoryServices,
+  })),
+);
+
+// Calendar Pages
 const CalendarPage = lazy(() =>
   import("./pages/Calendar/CalendarPage").then((m) => ({
     default: m.CalendarPage,
+  })),
+);
+
+// Community Events
+const CommunityEventsPage = lazy(() =>
+  import("./pages/Calendar/CommunityEvents").then((m) => ({
+    default: m.CommunityEvents,
+  })),
+);
+
+// Newletters
+const NewslettersPage = lazy(() =>
+  import("./pages/Calendar/Newsletters").then((m) => ({
+    default: m.Newsletters,
   })),
 );
 
@@ -147,6 +176,13 @@ const CalendarPage = lazy(() =>
 const GeneralDonationPage = lazy(() =>
   import("./pages/Donations/GeneralDonation").then((m) => ({
     default: m.GeneralDonation,
+  })),
+);
+
+// Recurring Donation Page
+const RecurringDonationPage = lazy(() =>
+  import("./pages/Donations/RecurringDonation").then((m) => ({
+    default: m.RecurringDonation,
   })),
 );
 
@@ -270,6 +306,18 @@ const router = createBrowserRouter([
         ),
       },
 
+      // Recurring Donation Page Route
+      {
+        path: "recurring-donation",
+        element: (
+          <ErrorBoundary name="RecurringDonationPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <RecurringDonationPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+
       // Cart Page Route
       {
         path: "/cart",
@@ -311,6 +359,26 @@ const router = createBrowserRouter([
           <Suspense fallback={<RouteSuspenseFallback />}>
             <ServicesPage />
           </Suspense>
+        ),
+      },
+      {
+        path: "sponsorships",
+        element: (
+          <ErrorBoundary name="SponsorshipsPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <SponsorshipsPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "sponsorships/:serviceType",
+        element: (
+          <ErrorBoundary name="SponsorshipsCategoryPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <SponsorshipsCategoryPage />
+            </Suspense>
+          </ErrorBoundary>
         ),
       },
       {
@@ -375,6 +443,30 @@ const router = createBrowserRouter([
               <CalendarPage />
             </Suspense>
           </AuthGuard>
+        ),
+      },
+
+      // Community Events
+      {
+        path: "community-events",
+        element: (
+          <ErrorBoundary name="CommunityEventsPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <CommunityEventsPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+
+      // News Letters
+      {
+        path: "newsletters",
+        element: (
+          <ErrorBoundary name="NewslettersPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <NewslettersPage />
+            </Suspense>
+          </ErrorBoundary>
         ),
       },
 
