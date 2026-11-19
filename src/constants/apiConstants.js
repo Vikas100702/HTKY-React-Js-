@@ -65,5 +65,6 @@ export const ENDPOINTS = Object.freeze({
     NMI_MAKE_PAYMENT: 'NMI_Payment/makePayment',
     UPDATE_TRANSACTION_STATUS: 'api/bookingService/updateTransactionStatus',
     ADD_MEMBERSHIP: 'api/home/addMemberShip',
-    GET_CUMULATIVE_AMOUNT: 'api/users/getCumulativeAmount'
+    GET_CUMULATIVE_AMOUNT: 'api/users/getCumulativeAmount',
+    GET_EVENT_AND_NOTIFICATION_DATA: '/api/bookingService/getEventAndNotificationData',
 });
