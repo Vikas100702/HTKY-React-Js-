@@ -58,9 +58,6 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
     useGetDieties();
 
   // Zustand State Selectors
-  const checkedCategoryMap = useServicesStore(
-    (state) => state.checkedCategoryMap,
-  );
   const categoryQuantitiesMap = useServicesStore(
     (state) => state.categoryQuantitiesMap,
   );
@@ -103,13 +100,20 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const updateSelectedDiety = useServicesStore(
     (state) => state.updateSelectedDiety,
   );
+  const clearServiceSelection = useServicesStore(
+    (state) => state.clearServiceSelection,
+  );
 
   const openModal = useServicesStore((state) => state.openModal);
   const closeModal = useServicesStore((state) => state.closeModal);
   const showToast = useServicesStore((state) => state.showToast);
 
-  const isChecked = Boolean(checkedCategoryMap[serviceKey]);
-  const quantity = categoryQuantitiesMap[serviceKey] || 1;
+  const cartItem = cartItems.find(
+    (item) => (item.id || item._id) === serviceKey,
+  );
+  const quantity = cartItem
+    ? Number(cartItem.quantity) || 1
+    : categoryQuantitiesMap[serviceKey] || 1;
   const selectedDates = selectedDatesMap[serviceKey] || [];
   const selectedTime = selectedTimeMap[serviceKey] || "";
   const selectedDiety = selectedDietyMap[serviceKey] || "";
@@ -268,10 +272,12 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         insertItem(cartPayload);
       }
     } else {
-      // Remove the item from the global cart when unchecked
+      // Remove the item from the global cart and clear its date/time/deity/qty/amount
       if (typeof removeItemFromCart === "function") {
         removeItemFromCart(serviceKey);
       }
+      clearServiceSelection(serviceKey);
+      return;
     }
 
     // Local state sync
@@ -281,10 +287,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const handleQuantityIncrease = () => {
     const nextQty = quantity + 1;
     incrementQuantity(serviceKey);
-    if (
-      (isCheckedInCart || isChecked) &&
-      typeof updateQuantityInCart === "function"
-    ) {
+    if (isCheckedInCart && typeof updateQuantityInCart === "function") {
       updateQuantityInCart(serviceKey, nextQty);
     }
   };
@@ -292,10 +295,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const handleQuantityDecrease = () => {
     const nextQty = Math.max(1, quantity - 1);
     decrementQuantity(serviceKey);
-    if (
-      (isCheckedInCart || isChecked) &&
-      typeof updateQuantityInCart === "function"
-    ) {
+    if (isCheckedInCart && typeof updateQuantityInCart === "function") {
       updateQuantityInCart(serviceKey, nextQty);
     }
   };
@@ -310,7 +310,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col overflow-hidden shadow-xs hover:shadow-md ${
         isGrey
           ? "opacity-60 grayscale pointer-events-none select-none border-gray-200"
-          : isCheckedInCart || isChecked
+          : isCheckedInCart
             ? "border-amber-400 ring-2 ring-amber-400/30"
             : "border-gray-200"
       }`}
@@ -356,7 +356,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
             <label className="flex items-center cursor-pointer pt-0.5">
               <input
                 type="checkbox"
-                checked={isCheckedInCart || isChecked}
+                checked={isCheckedInCart}
                 onChange={handleCheckboxChange}
                 aria-label={`Select ${service.title}`}
                 className="w-5 h-5 text-[#900000] rounded-md border-gray-300 focus:ring-[#900000] cursor-pointer"
