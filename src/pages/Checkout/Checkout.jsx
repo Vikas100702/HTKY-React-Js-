@@ -3,8 +3,9 @@
  * @description Enterprise-grade, crash-resilient Devotee Checkout Page.
  * Evaluates active membership eligibility (PHP `membershipStatusCheck` parity),
  * computes per-item & global membership discounts, displays transparent original vs.
- * discounted pricing, validates Sankalpam details, reserves temporary slots,
- * and mounts `HostedPaymentModal` for PCI-compliant gateway tokenization.
+ * discounted pricing, conditionally renders quantity steppers strictly for items
+ * with `qtyCounterEnabled === true`, validates Sankalpam details, reserves temporary
+ * slots, and mounts `HostedPaymentModal` for PCI-compliant gateway tokenization.
  *
  * Strict Tech Stack: Pure ES6+ JavaScript (NO TypeScript), Tailwind CSS, Zustand, TanStack Query.
  * Aligns strictly with Non-Negotiables #1, #2, #3, #4, and #5.
@@ -26,10 +27,9 @@ import { FamilySankalpamForm } from "../../components/profile/FamilySankalpamFor
 import { HostedPaymentModal } from "../../components/checkout/HostedPaymentModal";
 import { decodeBase64 } from "../../utils/base64";
 import logo from "../../assets/logo.png";
+import membershipBadge from "../../assets/membership.png";
 import {
   Trash2,
-  User,
-  ShieldCheck,
   Plus,
   Minus,
   Sparkles,
@@ -40,7 +40,6 @@ import {
   ArrowRight,
   AlertCircle,
   Loader2,
-  BadgeCheck,
   Tag,
 } from "lucide-react";
 
@@ -261,7 +260,7 @@ export const Checkout = () => {
 
       if (
         tempHoldResponse?.statusCode === 2 ||
-        tempHoldResponse?.status === 2
+        tempHoldResponse?.statusCode === 2
       ) {
         const expiredMsg =
           tempHoldResponse?.Message ||
@@ -395,9 +394,11 @@ export const Checkout = () => {
             className="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                <BadgeCheck className="w-5 h-5" aria-hidden="true" />
-              </div>
+              <img
+                src={membershipBadge}
+                alt=""
+                className="w-8 h-8 object-contain shrink-0"
+              />
               <div>
                 <p className="text-xs sm:text-sm font-bold text-emerald-950">
                   Active{" "}
@@ -545,7 +546,10 @@ export const Checkout = () => {
                         </div>
 
                         <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
-                          {item.name || item.title || item.serviceName}
+                          {item.name ||
+                            item.title ||
+                            item.serviceName ||
+                            item.refDataName}
                         </h3>
 
                         {/* Unit Price Breakdown */}
@@ -590,38 +594,50 @@ export const Checkout = () => {
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-5">
-                        <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50 p-1 shadow-2xs">
+                        {item.qtyCounterEnabled ? (
+                          <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50 p-1 shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => handleDecreaseQty(item)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors shadow-2xs cursor-pointer focus:outline-none"
+                              aria-label={
+                                qty === 1
+                                  ? "Remove item from cart"
+                                  : "Decrease item quantity"
+                              }
+                            >
+                              {qty === 1 ? (
+                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              ) : (
+                                <Minus className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <span
+                              className="w-8 text-center text-xs font-bold text-gray-900"
+                              aria-live="polite"
+                            >
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleIncreaseQty(item)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 hover:text-emerald-700 transition-colors shadow-2xs cursor-pointer focus:outline-none"
+                              aria-label="Increase item quantity"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            onClick={() => handleDecreaseQty(item)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors shadow-2xs cursor-pointer focus:outline-none"
-                            aria-label={
-                              qty === 1
-                                ? "Remove item from cart"
-                                : "Decrease item quantity"
-                            }
+                            onClick={() => removeItem(itemId)}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors shadow-2xs cursor-pointer focus:outline-none"
+                            aria-label="Remove item from cart"
+                            title="Remove item"
                           >
-                            {qty === 1 ? (
-                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                            ) : (
-                              <Minus className="w-3.5 h-3.5" />
-                            )}
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                          <span
-                            className="w-8 text-center text-xs font-bold text-gray-900"
-                            aria-live="polite"
-                          >
-                            {qty}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleIncreaseQty(item)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 hover:text-emerald-700 transition-colors shadow-2xs cursor-pointer focus:outline-none"
-                            aria-label="Increase item quantity"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        )}
 
                         <div className="text-right min-w-[85px] flex flex-col items-end">
                           {hasDiscount && (
@@ -693,12 +709,12 @@ export const Checkout = () => {
               {/* Devotee Info Badge */}
               <div className="flex items-center justify-between pb-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-sm"
-                    aria-hidden="true"
-                  >
-                    <User className="w-4 h-4" />
-                  </div>
+                
+                    <img
+                      src={membershipBadge}
+                      alt=""
+                      className="w-8 h-8 object-contain shrink-0"
+                    />{" "}
                   <div>
                     <p className="text-xs font-bold uppercase text-gray-900">
                       {devoteeProfile?.refDataName ||
@@ -708,7 +724,7 @@ export const Checkout = () => {
                     <p className="text-[11px] text-gray-500">
                       {devoteeProfile?.email
                         ? decodeBase64(devoteeProfile.email)
-                        : "devotee@example.com"}
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -836,22 +852,6 @@ export const Checkout = () => {
                   <span className="text-2xl sm:text-3xl font-serif font-extrabold text-[#900000]">
                     {currencySymbol}
                     {Number(finalPayableAmount).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Security Trust Indicators */}
-              <div className="pt-3 border-t border-gray-100 space-y-3">
-                <div className="border border-gray-200 rounded-xl p-3 bg-gray-50/60 flex items-center justify-between text-xs text-gray-600">
-                  <span className="flex items-center gap-2">
-                    <ShieldCheck
-                      className="w-5 h-5 text-emerald-600 shrink-0"
-                      aria-hidden="true"
-                    />
-                    Encrypted Gateway Protection
-                  </span>
-                  <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded font-semibold">
-                    PCI-DSS Compliant
                   </span>
                 </div>
               </div>
