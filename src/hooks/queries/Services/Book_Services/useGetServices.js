@@ -1,12 +1,22 @@
+/**
+ * @file src/hooks/queries/Services/useGetServices.js
+ * @description Reusable TanStack Query hooks and data adapters for `ServiceSetup` APIs
+ * across both `IN-TEMPLE` Services and `SPONSORSHIP` categories.
+ *
+ * Strict Tech Stack: Modern React JS (Pure ES6+ JavaScript, NO TypeScript).
+ * Aligns strictly with Critical Architectural Non-Negotiables #2, #3, #4, and #5.
+ */
+
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../../../api/client';
-import { ENDPOINTS } from '../../../constants/apiConstants';
-import { buildComponentConfigPayload } from '../../../utils/apiPayloadBuilder';
-import { ENV_CONFIG } from '../../../config/envConfig';
+import { apiClient } from '../../../../api/client';
+import { ENDPOINTS } from '../../../../constants/apiConstants';
+import { buildComponentConfigPayload } from '../../../../utils/apiPayloadBuilder';
+import { ENV_CONFIG } from '../../../../config/envConfig';
 
 const PRODUCT_ID = ENV_CONFIG.PRODUCT_ID;
 const CLIENT_ID = ENV_CONFIG.CLIENT_ID;
 export const IN_TEMPLE_CATEGORY = 'IN-TEMPLE';
+export const SPONSORSHIP_CATEGORY = 'SPONSORSHIP';
 
 export const parseServiceDate = (dateStr) => {
     if (!dateStr || typeof dateStr !== 'string' || !dateStr.trim()) {
@@ -27,7 +37,15 @@ export const parseServiceDate = (dateStr) => {
     return null;
 };
 
-export const adaptInTempleServicesData = (rawData) => {
+/**
+ * Shared normalizer for `ServiceSetup` items (used by In-Temple Services, Sponsorships, etc.).
+ * Enforces status/expiry checks, sequenceId sorting, image URL resolution, and all UI/cart flags.
+ *
+ * @param {Object|Array} rawData
+ * @param {string} [defaultCategory='IN-TEMPLE']
+ * @returns {Array<Object>}
+ */
+export const adaptServiceSetupData = (rawData, defaultCategory = IN_TEMPLE_CATEGORY) => {
     try {
         const items = Array.isArray(rawData?.data)
             ? rawData.data
@@ -69,30 +87,37 @@ export const adaptInTempleServicesData = (rawData) => {
             return (isNaN(seqA) ? 999999 : seqA) - (isNaN(seqB) ? 999999 : seqB);
         });
 
+        const normalizedBase = String(ENV_CONFIG.BASE_URL || '').replace(/\/+$/, '');
+
         return activeItems.map((item) => {
-            const rawAmount = String(item?.serviceAmount || '0').replace(/[^0-9.]/g, '');
+            const rawAmount = String(item?.serviceAmount ?? '0').replace(/[^0-9.]/g, '');
             const parsedAmount = parseFloat(rawAmount) || 0;
 
             const rawImage = item?.Image || item?.image || '';
             let resolvedImage = '';
             if (typeof rawImage === 'string' && rawImage.trim().length > 0) {
-                resolvedImage = rawImage.startsWith('http')
-                    ? rawImage
-                    : `${ENV_CONFIG.BASE_URL}${rawImage}`;
+                const trimmedImg = rawImage.trim();
+                if (/^https?:\/\//i.test(trimmedImg) || trimmedImg.startsWith('data:')) {
+                    resolvedImage = trimmedImg;
+                } else {
+                    const normalizedPath = trimmedImg.startsWith('/') ? trimmedImg : `/${trimmedImg}`;
+                    resolvedImage = normalizedBase ? `${normalizedBase}${normalizedPath}` : normalizedPath;
+                }
             }
 
             const rawDietySelected = String(item?.isDietySelected || item?.isDietySelectedId || '').trim().toUpperCase();
             const rawDT = String(item?.isDTVisible || item?.isDtVisible || '').trim().toUpperCase();
             const rawTime = String(item?.isTimeVisible || item?.isTimeVisibleId || '').trim().toUpperCase();
             const rawQty = String(item?.qtyCounter || item?.qtyCounterId || '').trim().toUpperCase();
+            const rawMemberDiscount = String(item?.membershipDiscount || item?.membershipDiscountId || '').trim().toUpperCase();
 
             return {
-                id: item?._id || item?.refDataName || Math.random().toString(36).substring(2, 9),
+                id: item?._id || item?.insertedId || item?.refDataName || Math.random().toString(36).substring(2, 9),
                 title: item?.refDataName || 'Temple Service',
                 description: item?.description || '',
                 imageUrl: resolvedImage,
                 amount: parsedAmount,
-                serviceAmount: item?.serviceAmount || '0',
+                serviceAmount: item?.serviceAmount ?? '0',
 
                 // Diety Dropdown Visibility Check
                 isDietySelected: rawDietySelected === 'YES',
@@ -111,7 +136,7 @@ export const adaptInTempleServicesData = (rawData) => {
                 bookingLimitPerDay: parseInt(item?.BookingLimitPerDay ?? item?.bookingLimitPerDay ?? '0', 10) || 0,
 
                 // Calendar & Tithi recurrence controls
-                dayTypes: item?.dayTypes || '',
+                dayTypes: item?.dayTypes || item?.dayTypesId || '',
                 startDate: item?.startDate || '',
                 endDate: item?.endDate || '',
 
@@ -121,18 +146,23 @@ export const adaptInTempleServicesData = (rawData) => {
                 // Service Occurrences Cluster
                 serviceOccurrencesNo: parseInt(item?.serviceOccurrencesNo || '1', 10) || 1,
 
+                // Membership Discount Metadata
+                membershipDiscount: rawMemberDiscount === 'YES',
+                membershipAmount: parseFloat(String(item?.membershipAmount || '0').replace(/[^0-9.]/g, '')) || 0,
+
                 // Greyscale Availability Check Attributes
                 isAvailable: parseInt(item?.isAvailable ?? item?.availabilityInd ?? 0, 10) || 0,
                 availableCount: parseInt(item?.availableCount ?? item?.AvailableCount ?? 0, 10) || 0,
                 startTime: item?.startTime || '',
                 endTime: item?.endTime || '',
 
-                serviceTypes: item?.serviceTypes || '',
-                serviceCategoryTypes: item?.serviceCategoryTypes || IN_TEMPLE_CATEGORY,
+                bookingType: item?.bookingType || '',
+                serviceTypes: item?.serviceTypes || item?.serviceTypesId || '',
+                serviceCategoryTypes: item?.serviceCategoryTypes || defaultCategory,
                 status: item?.status || 'ACTIVE',
                 sequenceId: item?.sequenceIdAsNumber ?? (parseInt(item?.sequenceId, 10) || 999999),
                 includeSankalpam: item?.includeSankalpam || '',
-                rawItem: item, // Preserve the original raw item for any future reference
+                rawItem: item,
             };
         });
     } catch (error) {
@@ -140,6 +170,10 @@ export const adaptInTempleServicesData = (rawData) => {
         return [];
     }
 };
+
+// Backward-compatible alias for existing imports
+export const adaptInTempleServicesData = (rawData) =>
+    adaptServiceSetupData(rawData, IN_TEMPLE_CATEGORY);
 
 const fetchInTempleServices = async ({ signal }) => {
     const payload = buildComponentConfigPayload({
@@ -155,13 +189,63 @@ const fetchInTempleServices = async ({ signal }) => {
     });
 
     const response = await apiClient.post(ENDPOINTS.FILTER_API, payload, { signal });
-    return adaptInTempleServicesData(response?.data || response);
+    return adaptServiceSetupData(response?.data || response, IN_TEMPLE_CATEGORY);
 };
 
 export const useGetServices = () => {
     return useQuery({
         queryKey: ['templeServices', IN_TEMPLE_CATEGORY],
         queryFn: fetchInTempleServices,
+        staleTime: 1000 * 60 * 15,
+        gcTime: 1000 * 60 * 30,
+        refetchOnWindowFocus: false,
+        retry: 1,
+    });
+};
+
+/**
+ * Fetches Sponsorship `ServiceSetup` items for a given `serviceTypes` (`refDataName`, e.g., `"ANNUAL PUJAS"`).
+ *
+ * @param {string} serviceType - Exact `refDataName` from Sponsorship category card
+ * @returns {import('@tanstack/react-query').UseQueryResult<Array<Object>>}
+ */
+export const useGetSponsorshipServices = (serviceType) => {
+    const normalizedType = typeof serviceType === 'string' ? serviceType.trim() : '';
+
+    return useQuery({
+        queryKey: ['templeServices', SPONSORSHIP_CATEGORY, normalizedType],
+        enabled: Boolean(normalizedType),
+        queryFn: async ({ signal }) => {
+            const baseConfig = buildComponentConfigPayload({
+                moduleName: 'Temple Services',
+                aspectType: 'ServiceSetup',
+                collectionType: 'Business',
+                skip: 0,
+                next: 5000,
+            });
+
+            const payload = {
+                ...baseConfig,
+                componentConfig: {
+                    ...baseConfig.componentConfig,
+                    query: {
+                        aspectType: 'ServiceSetup',
+                        serviceCategoryTypes: SPONSORSHIP_CATEGORY,
+                        serviceTypes: normalizedType,
+                        sourceTypes: 'WEBSITE',
+                        status: 'ACTIVE',
+                    },
+                    moduleName: 'Temple Services',
+                    aspectType: 'ServiceSetup',
+                    collectionType: 'Business',
+                    skip: 0,
+                    next: 5000,
+                },
+            };
+
+            const response = await apiClient.post(ENDPOINTS.FILTER_API, payload, { signal });
+            return adaptServiceSetupData(response?.data || response, SPONSORSHIP_CATEGORY);
+        },
         staleTime: 1000 * 60 * 15,
         gcTime: 1000 * 60 * 30,
         refetchOnWindowFocus: false,
@@ -264,5 +348,4 @@ export const fetchTithiDates = async (tithiName, signal) => {
         return [];
     }
 };
-
 

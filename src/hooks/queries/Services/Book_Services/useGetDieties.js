@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../../../api/client';
-import { ENDPOINTS } from '../../../constants/apiConstants';
-import { buildComponentConfigPayload } from '../../../utils/apiPayloadBuilder';
+import { apiClient } from '../../../../api/client';
+import { ENDPOINTS } from '../../../../constants/apiConstants';
+import { buildComponentConfigPayload } from '../../../../utils/apiPayloadBuilder';
 
 export const adaptDietiesData = (rawData) => {
     try {
@@ -12,7 +12,7 @@ export const adaptDietiesData = (rawData) => {
                 : Array.isArray(rawData)
                     ? rawData
                     : [];
-        
+
         if (!list || list.length === 0) {
             return [];
         }

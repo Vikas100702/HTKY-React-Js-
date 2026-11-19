@@ -5,9 +5,9 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { buildComponentConfigPayload } from "../../../utils/apiPayloadBuilder";
-import { apiClient } from "../../../api/client";
-import { ENDPOINTS } from "../../../constants/apiConstants";
+import { buildComponentConfigPayload } from "../../../../utils/apiPayloadBuilder";
+import { apiClient } from "../../../../api/client";
+import { ENDPOINTS } from "../../../../constants/apiConstants";
 
 /**
  * 1. Data Adapter
