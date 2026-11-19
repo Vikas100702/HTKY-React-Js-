@@ -185,6 +185,34 @@ export const useServicesStore = create((set, get) => ({
     },
 
     /**
+     * Clears all transient UI selections (date, time, deity, quantity, custom amount)
+     * for a specific service when it is removed from the cart.
+     */
+    clearServiceSelection: (serviceKey) =>
+        set((state) => {
+            if (!serviceKey) return state;
+            const nextDates = { ...state.selectedDatesMap };
+            const nextTimes = { ...state.selectedTimeMap };
+            const nextDieties = { ...state.selectedDietyMap };
+            const nextQuantities = { ...state.categoryQuantitiesMap };
+            const nextCustomAmounts = { ...state.customAmountMap };
+
+            delete nextDates[serviceKey];
+            delete nextTimes[serviceKey];
+            delete nextDieties[serviceKey];
+            delete nextQuantities[serviceKey];
+            delete nextCustomAmounts[serviceKey];
+
+            return {
+                selectedDatesMap: nextDates,
+                selectedTimeMap: nextTimes,
+                selectedDietyMap: nextDieties,
+                categoryQuantitiesMap: nextQuantities,
+                customAmountMap: nextCustomAmounts,
+            };
+        }),
+
+    /**
      * Flushes all state maps and releases mutex locks on module teardown.
      */
     clearStore: () =>
