@@ -1,8 +1,12 @@
 /**
- * @file src/pages/Donation/hooks/useGeneralDonation.js
- * @description Enterprise Logic Controller Hook for HTKY General Donation Module.
- * Synchronizes local selections directly with Zustand global cart store (useCartStore),
+ * @file src/pages/Donations/hooks/useGeneralDonation.js
+ * @description Enterprise Logic Controller Hook for HTKY General Donation & Sponsorship Module.
+ * Synchronizes local selections directly with Zustand global cart store (`useCartStore`),
+ * preserves backend `qtyCounter` and `rawItem` metadata for Checkout parity,
  * enforces dynamic Lunar Tithi engine, holding dates exclusion, and modal stacking locks.
+ *
+ * Strict Tech Stack: Pure ES6+ JavaScript (NO TypeScript).
+ * Aligns strictly with Non-Negotiables #2, #3, #4, and #5.
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -29,7 +33,7 @@ const WEEKDAY_MAP = Object.freeze({
     WEDNESDAY: 3,
     THURSDAY: 4,
     FRIDAY: 5,
-    SATURDAY: 6
+    SATURDAY: 6,
 });
 
 const ORDINAL_MAP = Object.freeze({
@@ -38,7 +42,7 @@ const ORDINAL_MAP = Object.freeze({
     THIRD: 3,
     FOURTH: 4,
     FIFTH: 5,
-    SIXTH: 6
+    SIXTH: 6,
 });
 
 // ============================================================================
@@ -51,7 +55,7 @@ const logControllerTelemetry = (level, message, context = {}) => {
         module: 'HTKY_DONATION_CONTROLLER',
         level,
         message,
-        context
+        context,
     };
 
     if (level === 'error') {
@@ -91,7 +95,7 @@ export const useGeneralDonation = () => {
     const {
         data: categories = [],
         isLoading: isCategoriesLoading,
-        isError: isCategoriesError
+        isError: isCategoriesError,
     } = useGetDonationCategories();
 
     const [userSelectedCategory, setUserSelectedCategory] = useState(null);
@@ -113,36 +117,23 @@ export const useGeneralDonation = () => {
     const {
         data: categoryDetails = [],
         isLoading: isDetailsLoading,
-        isError: isDetailsError
+        isError: isDetailsError,
     } = useGetDonationCategoryDetails(selectedCategory);
 
     // 90-Days Lunar Tithi dynamic query
     const {
         data: tithiDates = [],
-        isLoading: isTithiLoading
+        isLoading: isTithiLoading,
     } = useGetTithiDates(activeTithi);
 
-    // 1. Dynamic Client Settings Query (Settings API)
+    // Dynamic Client Settings Query (Settings API)
     const { data: clientSettings } = useGetClientSettings();
 
-    // Settings API se aane wale currency symbol ko Zustand cart store me sync karein
     useEffect(() => {
         if (clientSettings?.currencySymbol) {
             setCurrencySymbol(clientSettings.currencySymbol);
         }
     }, [clientSettings?.currencySymbol, setCurrencySymbol]);
-
-    // 2. Dynamic Service Availability Query (Availability API)
-    // Check: Sirf tabhi query fire hogi jab modal khula ho aur item me bookingLimitPerDay > 0 ho
-    // const isCustomSlotActive = Boolean(
-    //     dateModal.isOpen && checkBookingLimitPerDay(dateModal.item?.bookingLimitPerDay)
-    // );
-
-    // const { data: availabilityMap = {} } = useGetServiceAvailability(
-    //     dateModal.item?.refDataName,
-    //     dateModal.item?.serviceTypes || selectedCategory,
-    //     isCustomSlotActive
-    // );
 
     // --------------------------------------------------------------------------
     // 3. LOCAL INTERACTIVE STATE (UI Modifiers & Validation)
@@ -159,13 +150,17 @@ export const useGeneralDonation = () => {
         isOpen: false,
         item: null,
         isCustomSlot: false,
-        tithiKeyword: null
+        tithiKeyword: null,
     });
 
     const [timeModal, setTimeModal] = useState({
         isOpen: false,
-        item: null
+        item: null,
     });
+
+    const checkBookingLimitPerDay = useCallback((bookingLimit) => {
+        return (parseInt(bookingLimit, 10) || 0) > 0;
+    }, []);
 
     const isCustomSlotActive = Boolean(
         dateModal?.isOpen &&
@@ -285,15 +280,11 @@ export const useGeneralDonation = () => {
         return (qtyCounter || '').toString().trim().toUpperCase() === 'YES';
     }, []);
 
-    const checkBookingLimitPerDay = useCallback((bookingLimit) => {
-        return (parseInt(bookingLimit, 10) || 0) > 0;
-    }, []);
-
     // --------------------------------------------------------------------------
     // 6. DATE & TITHI CALCULATION ENGINE
     // --------------------------------------------------------------------------
 
-    const calculateGregorianDates = useCallback(({ dayTypes, startDate, endDate, holdingDates }) => {
+    const calculateGregorianDates = useCallback(({ dayTypes, startDate, endDate, holdingDates, bookingLimitPerDay, slotsMap = {} }) => {
         try {
             const upperDayTypes = (dayTypes || '').toUpperCase().trim();
             let allowedWeekdays = [];
@@ -359,7 +350,9 @@ export const useGeneralDonation = () => {
                 });
             }
 
+            const limit = parseInt(bookingLimitPerDay, 10) || 0;
             const availableDates = [];
+
             while (current <= endLimit) {
                 if (allowedWeekdays.includes(current.getDay())) {
                     const passesOrdinal = requiredOrdinal
@@ -367,12 +360,9 @@ export const useGeneralDonation = () => {
                         : true;
 
                     if (passesOrdinal && !holdingDatesSet.has(current.toDateString())) {
-                        const limit = parseInt(dateModal?.item?.bookingLimitPerDay, 10) || 0;
-
-                        // Flutter Check: Agar limit > 0 hai, bookedCount ghata kar verify karein
                         if (limit > 0) {
-                            const dateKey = formatDateToMMDDYYYY(current); // "MM/dd/yyyy" format
-                            const bookedCount = availabilityMap[dateKey] || 0;
+                            const dateKey = formatDateToMMDDYYYY(current);
+                            const bookedCount = slotsMap[dateKey] || 0;
                             const remainingSlots = limit - bookedCount;
                             if (remainingSlots > 0) {
                                 availableDates.push(new Date(current));
@@ -390,7 +380,9 @@ export const useGeneralDonation = () => {
             logControllerTelemetry('error', 'Gregorian date calculation error', { error: error.message });
             return [];
         }
-    }, []);
+    },
+        []
+    );
 
     const modalAvailableDates = useMemo(() => {
         if (!dateModal.isOpen || !dateModal.item) return [];
@@ -413,9 +405,11 @@ export const useGeneralDonation = () => {
             dayTypes: dateModal.item.dayTypes,
             startDate: dateModal.item.startDate,
             endDate: dateModal.item.endDate,
-            holdingDates: dateModal.item.holdingDates
+            holdingDates: dateModal.item.holdingDates,
+            bookingLimitPerDay: dateModal.item.bookingLimitPerDay,
+            slotsMap: availabilityMap,
         });
-    }, [dateModal.isOpen, dateModal.item, dateModal.tithiKeyword, tithiDates, calculateGregorianDates]);
+    }, [dateModal.isOpen, dateModal.item, dateModal.tithiKeyword, tithiDates, availabilityMap, calculateGregorianDates]);
 
     const getSelectedOccurrences = useCallback((userSelectedDate, occurrencesNo, allDates) => {
         const occurrences = Math.max(parseInt(occurrencesNo, 10) || 1, 1);
@@ -429,15 +423,17 @@ export const useGeneralDonation = () => {
         return allDates.slice(startIndex, startIndex + occurrences);
     }, []);
 
-    const getRemainingSlots = useCallback((date, bookingLimitPerDay) => {
-        const limit = parseInt(bookingLimitPerDay, 10) || 0;
-        if (limit <= 0) return 9999;
+    const getRemainingSlots = useCallback(
+        (date, bookingLimitPerDay) => {
+            const limit = parseInt(bookingLimitPerDay, 10) || 0;
+            if (limit <= 0) return 9999;
 
-        // Flutter Logic: limit - bookedCount
-        const dateKey = formatDateToMMDDYYYY(date); // "MM/dd/yyyy" format
-        const booked = availabilityMap[dateKey] ?? 0;
-        return limit - booked;
-    }, [availabilityMap]);
+            const dateKey = formatDateToMMDDYYYY(date);
+            const booked = availabilityMap[dateKey] ?? 0;
+            return limit - booked;
+        },
+        [availabilityMap]
+    );
 
     // --------------------------------------------------------------------------
     // 7. ACTION DISPATCHERS WITH GLOBAL CART STORE SYNC
@@ -453,7 +449,7 @@ export const useGeneralDonation = () => {
     const handleToggleDescription = (key) => {
         setExpandedDescMap((prev) => ({
             ...prev,
-            [key]: prev[key] === undefined ? false : !prev[key]
+            [key]: prev[key] === undefined ? false : !prev[key],
         }));
     };
 
@@ -462,7 +458,6 @@ export const useGeneralDonation = () => {
         const isCustomAmount = item.parsedAmount <= 0;
         const currentCustomAmount = parseFloat(customAmountMap[key] || 0);
 
-        // If flexible amount and the user has not entered an amount, do not allow it to be checked.
         if (isChecked && isCustomAmount && (!currentCustomAmount || currentCustomAmount <= 0)) {
             setWarningMessage('Amount Required: Please enter a valid offering amount before selecting this item.');
             return;
@@ -482,14 +477,18 @@ export const useGeneralDonation = () => {
             const price = item.parsedAmount > 0 ? item.parsedAmount : parseFloat(customAmountMap[key] || 0);
             const payload = {
                 id: item.id,
+                title: item.refDataName,
                 refDataName: item.refDataName,
                 serviceTypes: item.serviceTypes,
                 serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
+                itemType: String(item.serviceTypes || '').trim().toUpperCase(),
                 amount: price,
                 quantity: 1,
                 image: item.image,
                 selectedDates: selectedDatesMap[key] || [],
-                selectedTime: selectedTimeMap[key] || ''
+                selectedTime: selectedTimeMap[key] || '',
+                qtyCounter: item.qtyCounter,
+                rawItem: item,
             };
             addItemToGlobalCart(payload);
         } else {
@@ -498,40 +497,6 @@ export const useGeneralDonation = () => {
     };
 
     // Synchronized Custom Amount Handler
-    // const handleCustomAmountChange = (key, value) => {
-    //     const item = categoryDetails.find((cat) => cat.id === key);
-    //     if (!item) return;
-
-    //     const parsed = parseFloat(value);
-    //     setCustomAmountMap((prev) => ({ ...prev, [key]: value }));
-
-    //     if (!isNaN(parsed) && parsed > 0) {
-    //         const isDtVisible = checkDateVisibility(item.isDTVisible);
-    //         const selectedDates = selectedDatesMap[key] || [];
-
-    //         if (isDtVisible && selectedDates.length === 0) {
-    //             setWarningMessage('Date Required: Please select a date to proceed with this service.');
-    //             return;
-    //         }
-
-    //         setWarningMessage('');
-    //         addItemToGlobalCart({
-    //             id: item.id,
-    //             refDataName: item.refDataName,
-    //             serviceTypes: item.serviceTypes,
-    //             serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
-    //             amount: parsed,
-    //             quantity: categoryQuantitiesMap[key] || 1,
-    //             image: item.image,
-    //             selectedDates: selectedDatesMap[key] || [],
-    //             selectedTime: selectedTimeMap[key] || ''
-    //         });
-    //     } else {
-    //         removeItemFromGlobalCart(key);
-    //     }
-    // };
-
-    // Synchronized Custom Amount Handler (Amount enter karne par automatic tick nahi hoga)
     const handleCustomAmountChange = (key, value) => {
         const item = categoryDetails.find((cat) => cat.id === key);
         if (!item) return;
@@ -539,7 +504,6 @@ export const useGeneralDonation = () => {
         const parsed = parseFloat(value);
         setCustomAmountMap((prev) => ({ ...prev, [key]: value }));
 
-        // Agar user ne amount clear kar diya ya 0/invalid kar diya, aur item cart mein tha, toh remove kar dein
         if (isNaN(parsed) || parsed <= 0) {
             if (checkedCategoryMap[key]) {
                 removeItemFromGlobalCart(key);
@@ -547,8 +511,6 @@ export const useGeneralDonation = () => {
             return;
         }
 
-        // Agar item pehle se checked/selected hai, toh cart mein uska amount live update karein.
-        // Agar checked nahi hai, toh checkbox automatically tick nahi hoga (user ko manually tick karna padega).
         if (checkedCategoryMap[key]) {
             const isDtVisible = checkDateVisibility(item.isDTVisible);
             const selectedDates = selectedDatesMap[key] || [];
@@ -563,7 +525,7 @@ export const useGeneralDonation = () => {
             if (existing) {
                 addItemToGlobalCart({
                     ...existing,
-                    amount: parsed
+                    amount: parsed,
                 });
             }
         }
@@ -581,14 +543,18 @@ export const useGeneralDonation = () => {
             const price = item.parsedAmount > 0 ? item.parsedAmount : parseFloat(customAmountMap[key] || 0);
             addItemToGlobalCart({
                 id: item.id,
+                title: item.refDataName,
                 refDataName: item.refDataName,
                 serviceTypes: item.serviceTypes,
                 serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
+                itemType: String(item.serviceTypes || '').trim().toUpperCase(),
                 amount: price,
                 quantity: 1,
                 image: item.image,
                 selectedDates: selectedDatesMap[key] || [],
-                selectedTime: selectedTimeMap[key] || ''
+                selectedTime: selectedTimeMap[key] || '',
+                qtyCounter: item.qtyCounter,
+                rawItem: item,
             });
         } else {
             updateGlobalQuantity(key, nextQty);
@@ -620,7 +586,7 @@ export const useGeneralDonation = () => {
             isOpen: true,
             item,
             isCustomSlot: checkBookingLimitPerDay(item?.bookingLimitPerDay),
-            tithiKeyword: tithi
+            tithiKeyword: tithi,
         });
     };
 
@@ -630,7 +596,7 @@ export const useGeneralDonation = () => {
             isOpen: false,
             item: null,
             isCustomSlot: false,
-            tithiKeyword: null
+            tithiKeyword: null,
         });
     };
 
@@ -646,16 +612,15 @@ export const useGeneralDonation = () => {
 
         setSelectedDatesMap((prev) => ({
             ...prev,
-            [serviceKey]: occurrences
+            [serviceKey]: occurrences,
         }));
 
-        // Update global cart if item is already present
         if (checkedCategoryMap[serviceKey]) {
             const existing = cartItems.find((i) => i.id === serviceKey);
             if (existing) {
                 addItemToGlobalCart({
                     ...existing,
-                    selectedDates: occurrences
+                    selectedDates: occurrences,
                 });
             }
         }
@@ -689,7 +654,6 @@ export const useGeneralDonation = () => {
         if (!timeModal.item || !timeString) return;
         const serviceKey = timeModal.item.id;
 
-        // Operating hours check: 9 AM to 9 PM
         const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
         if (match) {
             const [, hours, minutes, modifier] = match;
@@ -724,7 +688,7 @@ export const useGeneralDonation = () => {
         setWarningMessage('');
         setSelectedTimeMap((prev) => ({
             ...prev,
-            [serviceKey]: timeString
+            [serviceKey]: timeString,
         }));
 
         if (checkedCategoryMap[serviceKey]) {
@@ -732,7 +696,7 @@ export const useGeneralDonation = () => {
             if (existing) {
                 addItemToGlobalCart({
                     ...existing,
-                    selectedTime: timeString
+                    selectedTime: timeString,
                 });
             }
         }
@@ -749,11 +713,11 @@ export const useGeneralDonation = () => {
         logControllerTelemetry('info', 'Donation checkout initiated from global cart', {
             totalCartCount,
             totalCartAmount,
-            currencySymbol
+            currencySymbol,
         });
 
         setWarningMessage(
-            `Checkout Summary: ${totalCartCount} item(s) totaling ${currencySymbol}${totalCartAmount.toFixed(2)}. (Gateway integration proceeds in Phase 2).`
+            `Checkout Summary: ${totalCartCount} item(s) totaling ${currencySymbol}${totalCartAmount.toFixed(2)}.`
         );
     };
 
@@ -777,10 +741,10 @@ export const useGeneralDonation = () => {
             expandedDescMap,
             dateModal: {
                 ...dateModal,
-                availableDates: modalAvailableDates
+                availableDates: modalAvailableDates,
             },
             timeModal,
-            warningMessage
+            warningMessage,
         },
         actions: {
             setSearchQuery,
@@ -797,14 +761,14 @@ export const useGeneralDonation = () => {
             handleOpenTimePicker,
             handleCloseTimePicker,
             handleSelectTime,
-            handleCheckoutClick
+            handleCheckoutClick,
         },
         helpers: {
             isCategoryGreyScale,
             checkDateVisibility,
             checkTimeVisibility,
             checkQtyCounterEnabled,
-            getRemainingSlots
-        }
+            getRemainingSlots,
+        },
     };
 };
