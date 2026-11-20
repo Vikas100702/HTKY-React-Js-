@@ -14,7 +14,8 @@ import { useGetRecurringDonations } from "../../hooks/queries/Donations/useGetRe
 import { useGetClientSettings } from "../../hooks/queries/Donations/useGetDonations";
 import { useServicesStore } from "../../store/useServicesStore";
 import { UniversalServiceCard } from "../../components/shared/UniversalServiceCard";
-import { CommonCartFooter } from "../../components/shared/CommonCartFooter";
+import { useNavigate } from "react-router-dom";
+import useRecurringCartStore from "../../store/useRecurringCartStore";
 
 export const RecurringDonation = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +33,12 @@ export const RecurringDonation = () => {
 
   const activeToast = useServicesStore((state) => state.activeToast);
   const clearToast = useServicesStore((state) => state.clearToast);
+
+  const navigate = useNavigate();
+  const recurringItems = useRecurringCartStore((state) => state.items || []);
+  const recurringTotalAmount = useRecurringCartStore(
+    (state) => state.totalAmount || 0,
+  );
 
   useEffect(() => {
     if (!activeToast) return undefined;
@@ -212,8 +219,36 @@ export const RecurringDonation = () => {
         )}
       </main>
 
-      {/* 5. Reusable Common Cart Footer */}
-      <CommonCartFooter checkoutPath="/checkout" />
+      {/* 5. Isolated Recurring Donation Checkout Footer (Decoupled from Global Cart) */}
+      {recurringItems.length > 0 && (
+        <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg px-4 sm:px-6 lg:px-8 py-3.5">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-900 font-bold text-xs flex items-center justify-center">
+                {recurringItems.length}
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Total Amount
+                </p>
+                <p className="text-lg sm:text-xl font-serif font-extrabold text-gray-900">
+                  {currencySymbol}
+                  {Number(recurringTotalAmount).toFixed(2)}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/recurring-donation/checkout")}
+              className="px-6 py-3 rounded-xl bg-[#900000] hover:bg-[#780000] text-amber-300 font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <span>Proceed to Checkout</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
