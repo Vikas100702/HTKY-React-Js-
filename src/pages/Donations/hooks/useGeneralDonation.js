@@ -276,8 +276,8 @@ export const useGeneralDonation = () => {
         return (isTimeVisible || '').trim().toUpperCase() === 'YES';
     }, []);
 
-    const checkQtyCounterEnabled = useCallback((qtyCounter) => {
-        return (qtyCounter || '').toString().trim().toUpperCase() === 'YES';
+    const checkQtyCounterEnabled = useCallback(() => {
+        return false;
     }, []);
 
     // --------------------------------------------------------------------------
@@ -479,15 +479,20 @@ export const useGeneralDonation = () => {
                 id: item.id,
                 title: item.refDataName,
                 refDataName: item.refDataName,
+                category: selectedCategory || item.serviceTypes || 'GENERAL DONATION',
                 serviceTypes: item.serviceTypes,
                 serviceCategoryTypes: item.serviceCategoryTypes || 'DONATIONS',
-                itemType: String(item.serviceTypes || '').trim().toUpperCase(),
+                itemType:
+                    String(item.serviceCategoryTypes || '').toUpperCase().includes('SPONSOR')
+                        ? 'SPONSORSHIP'
+                        : 'GENERAL DONATION',
                 amount: price,
-                quantity: 1,
+                quantity: 0,
+                qtyCounterEnabled: false,
                 image: item.image,
                 selectedDates: selectedDatesMap[key] || [],
                 selectedTime: selectedTimeMap[key] || '',
-                qtyCounter: item.qtyCounter,
+                qtyCounter: 'NO',
                 rawItem: item,
             };
             addItemToGlobalCart(payload);
