@@ -121,6 +121,30 @@ const DashboardPage = lazy(() =>
   import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
 
+const MyPujaBookingsPage = lazy(() =>
+  import("./pages/Dashboard/MyPujaBookings").then((m) => ({
+    default: m.MyPujaBookings,
+  })),
+);
+
+const MyDonationsPage = lazy(() =>
+  import("./pages/Dashboard/MyDonations").then((m) => ({
+    default: m.MyDonations,
+  })),
+);
+
+const MySponsorsPage = lazy(() =>
+  import("./pages/Dashboard/MySponsors").then((m) => ({
+    default: m.MySponsors,
+  })),
+);
+
+const MyPaymentsPage = lazy(() =>
+  import("./pages/Dashboard/MyPayments").then((m) => ({
+    default: m.MyPayments,
+  })),
+);
+
 const UserProfilePage = lazy(() =>
   import("./pages/Auth/UserProfile").then((m) => ({ default: m.UserProfile })),
 );
@@ -183,6 +207,12 @@ const GeneralDonationPage = lazy(() =>
 const RecurringDonationPage = lazy(() =>
   import("./pages/Donations/RecurringDonation").then((m) => ({
     default: m.RecurringDonation,
+  })),
+);
+
+const RecurringDonationCheckoutPage = lazy(() =>
+  import("./pages/Donations/RecurringDonationCheckout").then((m) => ({
+    default: m.RecurringDonationCheckout,
   })),
 );
 
@@ -318,6 +348,18 @@ const router = createBrowserRouter([
         ),
       },
 
+      // Dedicated Recurring Donation Checkout Route (Isolated from Global Cart)
+      {
+        path: "recurring-donation/checkout",
+        element: (
+          <ErrorBoundary name="RecurringDonationCheckoutPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <RecurringDonationCheckoutPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+
       // Cart Page Route
       {
         path: "/cart",
@@ -404,6 +446,46 @@ const router = createBrowserRouter([
               <ErrorBoundary name="DashboardPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
                   <DashboardPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "puja-bookings",
+            element: (
+              <ErrorBoundary name="MyPujaBookingsPage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <MyPujaBookingsPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "donations",
+            element: (
+              <ErrorBoundary name="MyDonationsPage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <MyDonationsPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "sponsors",
+            element: (
+              <ErrorBoundary name="MySponsorsPage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <MySponsorsPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "payments",
+            element: (
+              <ErrorBoundary name="MyPaymentsPage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <MyPaymentsPage />
                 </Suspense>
               </ErrorBoundary>
             ),
