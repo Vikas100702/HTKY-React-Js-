@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, User, Home } from "lucide-react";
+import { LayoutDashboard, User, Home, Flame, HandHeart, Sparkles, CreditCard } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { APP_COLORS } from "../../constants/appColors";
 
@@ -9,6 +9,30 @@ const ACCOUNT_MENU_ITEMS = [
     label: "Devotee Dashboard",
     path: "/account/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    id: "puja-bookings",
+    label: "My Puja Bookings",
+    path: "/account/puja-bookings",
+    icon: Flame,
+  },
+  {
+    id: "donations",
+    label: "My Donations",
+    path: "/account/donations",
+    icon: HandHeart,
+  },
+  {
+    id: "sponsors",
+    label: "My Sponsors",
+    path: "/account/sponsors",
+    icon: Sparkles,
+  },
+  {
+    id: "payments",
+    label: "My Payments",
+    path: "/account/payments",
+    icon: CreditCard,
   },
   {
     id: "profile",
@@ -24,8 +48,8 @@ export const AccountLayout = () => {
   const displayName = user?.firstName || user?.name || "Devotee";
 
   return (
-    <div className="w-full min-h-[80vh] bg-[#faf7f2] py-6 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 items-start">
+    <div className="w-full min-h-[80vh] bg-[#faf7f2] bg-[url('/src/assets/pattern-bg.jpg')] bg-no-repeat bg-cover bg-top bg-fixed py-6 px-3 sm:px-5 lg:px-6">
+      <div className="w-full max-w-none flex flex-col md:flex-row gap-6 items-start">
         {/* ================= LEFT SIDEBAR ================= */}
         <aside className="w-full md:w-64 lg:w-72 shrink-0 bg-white rounded-2xl shadow-sm border border-stone-200/80 overflow-hidden md:sticky md:top-16">
           {/* Welcome Header */}
