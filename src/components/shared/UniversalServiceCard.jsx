@@ -15,6 +15,7 @@ import {
 } from "../../hooks/queries/Services/Book_Services/useGetServices";
 import { ServiceDatePickerModal } from "../services/ServiceDatePickerModal";
 import { ServiceTimePickerModal } from "../services/ServiceTimePickerModal";
+import useRecurringCartStore from "../../store/useRecurringCartStore";
 
 const TITHI_KEYWORDS = Object.freeze([
   "PRATIPADA",
@@ -44,12 +45,49 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const abortControllerRef = useRef(null);
   const isMountedRef = useRef(true);
 
-  const insertItem = useCartStore(
+  const resolvedCategoryRaw = String(
+    service.serviceCategoryTypes || service.rawItem?.serviceCategoryTypes || "",
+  ).toUpperCase();
+  const resolvedServiceTypeRaw = String(
+    service.serviceTypes || service.rawItem?.serviceTypes || "",
+  ).toUpperCase();
+
+  const isDonationItem =
+    resolvedCategoryRaw.includes("DONATION") ||
+    resolvedServiceTypeRaw.includes("DONATION");
+  const isRecurringDonation =
+    resolvedServiceTypeRaw.includes("RECURRING") ||
+    resolvedCategoryRaw.includes("RECURRING");
+
+  const globalInsertItem = useCartStore(
     (state) => state.insertItem || state.addItem || state.upsertItem,
   );
-  const removeItemFromCart = useCartStore((state) => state.removeItem);
-  const updateQuantityInCart = useCartStore((state) => state.updateQuantity);
-  const cartItems = useCartStore((state) => state.items || []);
+  const globalRemoveItem = useCartStore((state) => state.removeItem);
+  const globalUpdateQuantity = useCartStore((state) => state.updateQuantity);
+  const globalCartItems = useCartStore((state) => state.items || []);
+
+  const recurringInsertItem = useRecurringCartStore(
+    (state) => state.insertItem || state.addItem,
+  );
+  const recurringRemoveItem = useRecurringCartStore(
+    (state) => state.removeItem,
+  );
+  const recurringCartItems = useRecurringCartStore(
+    (state) => state.items || [],
+  );
+
+  const insertItem = isRecurringDonation
+    ? recurringInsertItem
+    : globalInsertItem;
+  const removeItemFromCart = isRecurringDonation
+    ? recurringRemoveItem
+    : globalRemoveItem;
+  const updateQuantityInCart = isRecurringDonation
+    ? () => {}
+    : globalUpdateQuantity;
+  const cartItems = isRecurringDonation ? recurringCartItems : globalCartItems;
+
+  const showQtyCounter = !isDonationItem && Boolean(service.qtyCounterEnabled);
 
   const isCheckedInCart = cartItems.some((item) => item.id === serviceKey);
 
@@ -240,10 +278,14 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
 
       // Add the item to the global cart store
       // Flexible / Custom Amount validation check
+      const rawInputAmt =
+        customAmountMap[serviceKey] !== undefined
+          ? customAmountMap[serviceKey]
+          : cartItem?.amount || 0;
       const finalPrice =
         parsedServiceAmount > 0
           ? parsedServiceAmount
-          : parseFloat(customAmountMap[serviceKey] || 0);
+          : parseFloat(rawInputAmt || 0);
 
       if (isCustomAmount && (!Number.isFinite(finalPrice) || finalPrice <= 0)) {
         showToast(
@@ -278,11 +320,16 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         title: service.title,
         refDataName: service.title,
         amount: finalPrice,
-        quantity: quantity || 1,
+        quantity: isDonationItem ? 0 : quantity || 1,
+        qtyCounterEnabled: isDonationItem
+          ? false
+          : Boolean(service.qtyCounterEnabled),
         image: service.imageUrl || "",
         category: resolvedDisplayCategory,
         itemType: resolvedItemType,
         serviceCategoryTypes: resolvedCategoryType,
+        serviceTypes:
+          service.serviceTypes || service.rawItem?.serviceTypes || "",
         bookingType: service.bookingType || service.rawItem?.bookingType || "",
         dayTypes: service?.dayTypes || service.rawItem?.dayTypes || "",
         selectedDates: selectedDates || [],
@@ -510,10 +557,30 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
                   type="number"
                   min="1"
                   step="any"
-                  value={customAmountMap[serviceKey] || ""}
-                  onChange={(e) =>
-                    updateCustomAmount(serviceKey, e.target.value)
+                  value={
+                    customAmountMap[serviceKey] !== undefined
+                      ? customAmountMap[serviceKey]
+                      : isCheckedInCart && cartItem?.amount > 0
+                        ? String(cartItem.amount)
+                        : ""
                   }
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    updateCustomAmount(serviceKey, nextVal);
+                    const parsedNext = parseFloat(nextVal);
+                    if (
+                      isCheckedInCart &&
+                      Number.isFinite(parsedNext) &&
+                      parsedNext > 0 &&
+                      typeof insertItem === "function"
+                    ) {
+                      insertItem({
+                        ...cartItem,
+                        id: serviceKey,
+                        amount: parsedNext,
+                      });
+                    }
+                  }}
                   placeholder="Enter custom amount"
                   className="w-full pl-7 pr-3 py-1.5 text-xs font-semibold text-gray-800 bg-[#F8FAFC] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#900000] focus:bg-white transition-all"
                 />
@@ -522,7 +589,7 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
           )}
 
           {/* Quantity Stepper */}
-          {service.qtyCounterEnabled && (
+          {showQtyCounter && (
             <div className="flex items-center justify-between pt-1">
               <span className="text-xs font-medium text-gray-600">
                 Quantity
