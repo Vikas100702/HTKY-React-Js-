@@ -67,4 +67,7 @@ export const ENDPOINTS = Object.freeze({
     ADD_MEMBERSHIP: 'api/home/addMemberShip',
     GET_CUMULATIVE_AMOUNT: 'api/users/getCumulativeAmount',
     GET_EVENT_AND_NOTIFICATION_DATA: '/api/bookingService/getEventAndNotificationData',
+    VALIDATE_CAW_PAYMENT_CARD: 'api/payment/validateCAWPaymentCard',
+    VALIDATE_PAYMENT_CARD: 'api/payment/validatePaymentCard',
+    ADD_PLEDGE_FORM: 'api/bookingService/addPledgeForm',
 });
