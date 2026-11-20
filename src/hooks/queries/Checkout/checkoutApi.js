@@ -44,7 +44,12 @@ export const transformCartItemsForServer = (items) => {
     const { cartCreDate, cartCreTime } = getFormattedCartTimestamp();
 
     return items.map((item) => {
-        const qty = Math.max(1, Number(item.quantity || 1));
+        const isDonationItem = String(
+            item.itemType || item.serviceCategoryTypes || item.category || ''
+        )
+            .toUpperCase()
+            .includes('DONATION');
+        const qty = isDonationItem ? 0 : Math.max(1, Number(item.quantity || 1));
         const originalUnit = Number(item.oldServiceAmount ?? item.originalUnitPrice ?? item.amount ?? 0);
         const unitDiscount = Number(item.discountedAmount ?? 0);
         const finalUnit = Number(
