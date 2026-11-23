@@ -302,18 +302,23 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       const upperCat = String(resolvedCategoryType).toUpperCase();
       const isSponsorshipItem = upperCat.includes("SPONSOR");
       const isDonationItem = upperCat.includes("DONATION");
+      const isEventItem = upperCat.includes("EVENT");
 
       const resolvedDisplayCategory = isSponsorshipItem
         ? "SPONSORSHIP"
         : isDonationItem
           ? String(service.serviceTypes || "RECURRING DONATIONS").toUpperCase()
-          : "SERVICE";
+          : isEventItem
+            ? "EVENT"
+            : "SERVICE";
 
       const resolvedItemType = isSponsorshipItem
         ? "SPONSORSHIP"
         : isDonationItem
           ? "DONATION"
-          : "SERVICE";
+          : isEventItem
+            ? "EVENT"
+            : "SERVICE";
 
       const cartPayload = {
         id: service.id,
