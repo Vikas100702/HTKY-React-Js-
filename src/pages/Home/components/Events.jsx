@@ -7,6 +7,7 @@ import {
 import { APP_COLORS } from "../../../constants/appColors";
 import { APP_FONTS } from "../../../constants/appTheme";
 import bgCard from "../../../assets/bg-card.png";
+import { Link } from "react-router-dom";
 
 const DataRow = ({ label, value }) => (
   <div className="flex items-start py-3 border-b border-dotted border-gray-400 last:border-0">
@@ -89,39 +90,52 @@ export const EventsWidget = () => {
               </div>
             ) : upcomingEventData.length > 0 ? (
               <ul className="flex flex-col w-full text-left h-full overflow-y-auto">
-                {upcomingEventData.map((event) => (
-                  <li
-                    key={event.id}
-                    className="py-4 px-5 border-b border-dotted border-gray-400 hover:bg-black/5 transition-colors flex items-center gap-4"
-                  >
-                    {/* Left Side: Thumbnail Image */}
-                    {event.thumbnailImage && (
-                      <div className="shrink-0 w-16 h-16 rounded-md overflow-hidden border border-gray-300 shadow-sm flex items-center justify-center">
-                        <img
-                          src={event.thumbnailImage}
-                          alt={event.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                          }}
-                        />
-                      </div>
-                    )}
+                {upcomingEventData.map((event) => {
+                  const eventSlug = encodeURIComponent(
+                    String(event.refDataName || event.title || "event").trim(),
+                  ).replace(/%20/g, "+");
+                  const detailHref = `/event/${eventSlug}/${encodeURIComponent(event.id)}`;
 
-                    {/* Right Side: Text Content */}
-                    <div className="flex-1 flex flex-col justify-center">
-                      <h3
-                        className="text-base font-bold mb-0.5 uppercase text-sm leading-tight"
-                        style={{ color: APP_COLORS.primary }}
+                  return (
+                    <li
+                      key={event.id}
+                      className="border-b border-dotted border-gray-400 last:border-b-0"
+                    >
+                      <Link
+                        to={detailHref}
+                        aria-label={`View details for ${event.title}`}
+                        className="group py-4 px-5 hover:bg-black/5 focus-visible:outline-none focus-visible:bg-black/5 transition-colors flex items-center gap-4"
                       >
-                        {event.title}
-                      </h3>
-                      <p className="text-sm text-gray-800 font-medium mt-1">
-                        {event.date} {event.timing && ` | ${event.timing}`}
-                      </p>
-                    </div>
-                  </li>
-                ))}
+                        {/* Left Side: Thumbnail Image */}
+                        {event.thumbnailImage && (
+                          <div className="shrink-0 w-16 h-16 rounded-md overflow-hidden border border-gray-300 shadow-sm flex items-center justify-center bg-white">
+                            <img
+                              src={event.thumbnailImage}
+                              alt={event.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Right Side: Text Content */}
+                        <div className="flex-1 flex flex-col justify-center min-w-0">
+                          <h3
+                            className="text-sm font-bold mb-0.5 uppercase leading-tight group-hover:underline"
+                            style={{ color: APP_COLORS.primary }}
+                          >
+                            {event.title}
+                          </h3>
+                          <p className="text-sm text-gray-800 font-medium mt-1">
+                            {event.date} {event.timing && ` | ${event.timing}`}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500 font-semibold italic p-4 text-center">
