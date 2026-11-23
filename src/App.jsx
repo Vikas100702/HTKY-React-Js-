@@ -145,6 +145,12 @@ const MyPaymentsPage = lazy(() =>
   })),
 );
 
+const PaymentReceiptViewPage = lazy(() =>
+  import("./pages/Dashboard/PaymentReceiptView").then((m) => ({
+    default: m.PaymentReceiptView,
+  })),
+);
+
 const UserProfilePage = lazy(() =>
   import("./pages/Auth/UserProfile").then((m) => ({ default: m.UserProfile })),
 );
@@ -486,6 +492,16 @@ const router = createBrowserRouter([
               <ErrorBoundary name="MyPaymentsPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
                   <MyPaymentsPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "payments/receipt/:receiptId",
+            element: (
+              <ErrorBoundary name="PaymentReceiptViewPage">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <PaymentReceiptViewPage />
                 </Suspense>
               </ErrorBoundary>
             ),
