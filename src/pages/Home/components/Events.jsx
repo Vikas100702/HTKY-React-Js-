@@ -58,7 +58,7 @@ export const EventsWidget = () => {
   };
 
   return (
-    <section className="w-full max-w-7xl mx-auto px-4 py-8">
+    <section className="w-full max-w-7xs mx-auto px-4 py-8">
       {/* 3-Column Responsive Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-start">
         {/* CARD 1: Upcoming Events */}
