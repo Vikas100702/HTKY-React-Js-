@@ -117,6 +117,13 @@ const HomePage = lazy(() =>
   })),
 );
 
+// Events Details Page
+const EventDetailsPage = lazy(() =>
+  import("./pages/Events/EventDetails").then((m) => ({
+    default: m.EventDetails,
+  })),
+);
+
 const DashboardPage = lazy(() =>
   import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
@@ -162,7 +169,6 @@ const MembershipPage = lazy(() =>
 );
 
 // Services Pages
-
 const ServicesPage = lazy(() =>
   import("./pages/Services/Services").then((m) => ({
     default: m.Services,
@@ -329,6 +335,18 @@ const router = createBrowserRouter([
           <Suspense fallback={<RouteSuspenseFallback />}>
             <HomePage />
           </Suspense>
+        ),
+      },
+
+      // Events Details Page
+      {
+        path: "event/:eventSlug/:eventId",
+        element: (
+          <ErrorBoundary name="EventDetailsPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <EventDetailsPage />
+            </Suspense>
+          </ErrorBoundary>
         ),
       },
 
