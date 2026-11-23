@@ -25,6 +25,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import { fetchMyPayments } from "../../services/dashboardApi";
 import { useDateFilteredRecords } from "../../hooks/queries/Dashboard/useDateFilteredRecords";
 import { AccountFilterToolbar } from "../../components/dashboard/AccountFilterToolbar";
+import { encryptVaapField } from "../../utils/md5";
 
 const STATUS_BADGE_MAP = Object.freeze({
   COMPLETED: "bg-emerald-600 text-white border-emerald-600",
@@ -137,6 +138,7 @@ const normalizePaymentRow = (item, index) => {
     bookingDate,
     status,
     lineItems: normalizeLineItems(item),
+    rawItem: item,
   };
 };
 
@@ -231,9 +233,15 @@ export const MyPayments = () => {
   };
 
   const handleViewReceipt = (row) => {
-    window.alert(
-      `Coming Soon! Receipt #${row.receiptNumber} preview will be available shortly.`,
+    const safeReceiptParam = encodeURIComponent(
+      String(encryptVaapField(row.receiptNumber) || encryptVaapField(row.id) || "receipt"),
     );
+    navigate(`/account/payments/receipt/${safeReceiptParam}`, {
+      state: {
+        rawPayment: row.rawItem,
+        dateRange: resolvedDateRange,
+      },
+    });
   };
 
   return (
