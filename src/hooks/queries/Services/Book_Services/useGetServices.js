@@ -87,7 +87,7 @@ export const adaptServiceSetupData = (rawData, defaultCategory = IN_TEMPLE_CATEG
             return (isNaN(seqA) ? 999999 : seqA) - (isNaN(seqB) ? 999999 : seqB);
         });
 
-        const normalizedBase = String(ENV_CONFIG.BASE_URL || '').replace(/\/+$/, '');
+        const normalizedBase = String(ENV_CONFIG.PRE_BASE_URL || '').replace(/\/+$/, '');
 
         return activeItems.map((item) => {
             const rawAmount = String(item?.serviceAmount ?? '0').replace(/[^0-9.]/g, '');
