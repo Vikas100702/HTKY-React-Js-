@@ -4,7 +4,7 @@ import { PhoneInputField } from "../ui/PhoneInputField";
 import { useRegisterController } from "../../hooks/queries/Auth/useRegisterController";
 import { useModalStore } from "../../store/useModalStore";
 
-const RegisterModalContent = ({ onClose, logoUrl }) => {
+const RegisterModalContent = ({ onClose, logoUrl, redirectTo = "" }) => {
   const {
     registrationType,
     handleRegistrationTypeChange,
@@ -34,7 +34,7 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
     successMessage,
     companyEmailError,
     companyPhoneError,
-  } = useRegisterController();
+  } = useRegisterController({ redirectTo });
 
   const openModal = useModalStore((state) => state.openModal);
 
@@ -47,7 +47,11 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
     e.preventDefault();
     if (isLoading) return;
     handleClose();
-    openModal("SIGN_IN", { logoUrl });
+    openModal("SIGN_IN", {
+      logoUrl,
+      redirectTo,
+      ...(redirectTo === "/checkout" ? { requireOtp: false } : {}),
+    });
   };
 
   useEffect(() => {
@@ -329,7 +333,18 @@ const RegisterModalContent = ({ onClose, logoUrl }) => {
   );
 };
 
-export const RegisterModal = ({ isOpen, onClose, logoUrl }) => {
+export const RegisterModal = ({
+  isOpen,
+  onClose,
+  logoUrl,
+  redirectTo = "",
+}) => {
   if (!isOpen) return null;
-  return <RegisterModalContent onClose={onClose} logoUrl={logoUrl} />;
+  return (
+    <RegisterModalContent
+      onClose={onClose}
+      logoUrl={logoUrl}
+      redirectTo={redirectTo}
+    />
+  );
 };
