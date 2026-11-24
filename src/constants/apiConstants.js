@@ -70,4 +70,5 @@ export const ENDPOINTS = Object.freeze({
     VALIDATE_CAW_PAYMENT_CARD: 'api/payment/validateCAWPaymentCard',
     VALIDATE_PAYMENT_CARD: 'api/payment/validatePaymentCard',
     ADD_PLEDGE_FORM: 'api/bookingService/addPledgeForm',
+    GET_SERVICE_DETAIL_BY_ID: 'api/bookingService/getServiceDetailbyId',
 });
