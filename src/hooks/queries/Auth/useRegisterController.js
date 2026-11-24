@@ -4,7 +4,7 @@ import { useAddCustomerDetail, useGetCompanyDetails } from './useRegisterQueries
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useModalStore } from '../../../store/useModalStore';
 
-export const useRegisterController = () => {
+export const useRegisterController = ({ redirectTo = "" } = {}) => {
     const navigate = useNavigate();
     const abortControllerRef = useRef(null);
     const isAutoFillingRef = useRef(false);
@@ -212,7 +212,7 @@ export const useRegisterController = () => {
 
                 setTimeout(() => {
                     closeModal();
-                    navigate('/dashboard');
+                    navigate(redirectTo || '/dashboard');
                 }, 1000);
             } else {
                 setError(response?.message || 'Registration failed. Please try again.');
