@@ -12,8 +12,14 @@ import {
 import { PhoneInputField } from "../ui/PhoneInputField";
 import { useSignInController } from "../../hooks/queries/Auth/useSignInController";
 import { useModalStore } from "../../store/useModalStore";
+import logo from "../../assets/logo.png";
 
-const SignInModalContent = ({ onClose, logoUrl }) => {
+const SignInModalContent = ({
+  onClose,
+  logoUrl,
+  requireOtp = true,
+  redirectTo = "",
+}) => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+1");
@@ -44,7 +50,7 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
     isVerifyingOtp,
     error,
     registrationMsg,
-  } = useSignInController();
+  } = useSignInController({ requireOtp, redirectTo });
 
   const handleClose = useCallback(() => {
     if (isLoading) return;
@@ -55,7 +61,7 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
     e.preventDefault();
     if (isLoading) return;
     handleClose();
-    openModal("REGISTER", { logoUrl });
+    openModal("REGISTER", { logoUrl, redirectTo });
   };
 
   useEffect(() => {
@@ -194,9 +200,11 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
               }}
             />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-[#900000] font-serif font-bold text-3xl mb-2 shadow-sm">
-              ॐ
-            </div>
+            <img
+              src={logo}
+              alt=""
+              className="w-20 h-20 object-contain shrink-0"
+            />
           )}
 
           <h2
@@ -394,9 +402,20 @@ const SignInModalContent = ({ onClose, logoUrl }) => {
   );
 };
 
-export const SignInModal = ({ isOpen, onClose, logoUrl }) => {
+export const SignInModal = ({
+  isOpen,
+  onClose,
+  logoUrl,
+  requireOtp = true,
+  redirectTo = "",
+}) => {
   if (!isOpen) return null;
-  return <SignInModalContent onClose={onClose} logoUrl={logoUrl} />;
+  return (
+    <SignInModalContent
+      onClose={onClose}
+      logoUrl={logoUrl}
+      requireOtp={requireOtp}
+      redirectTo={redirectTo}
+    />
+  );
 };
-
-
