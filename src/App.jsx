@@ -124,6 +124,13 @@ const EventDetailsPage = lazy(() =>
   })),
 );
 
+// Make a Payment Page
+const MakePaymentPage = lazy(() =>
+  import("./pages/MakePayment/MakePaymentPage").then((m) => ({
+    default: m.MakePaymentPage,
+  })),
+);
+
 const DashboardPage = lazy(() =>
   import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
@@ -345,6 +352,18 @@ const router = createBrowserRouter([
           <ErrorBoundary name="EventDetailsPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
               <EventDetailsPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+
+      // Make a Pyament Page
+      {
+        path: "make-a-payment/:serviceId",
+        element: (
+          <ErrorBoundary name="MakePaymentPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <MakePaymentPage />
             </Suspense>
           </ErrorBoundary>
         ),
