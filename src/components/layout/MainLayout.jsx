@@ -132,6 +132,7 @@ const ScrollToTopOnNavigation = () => {
 export const MainLayout = () => {
   const location = useLocation();
   const { activeModal, modalPayload, closeModal } = useModalStore();
+  const isMakePaymentRoute = location.pathname.startsWith("/make-a-payment");
 
   const handleSignInSubmit = (data) => {
     console.log("[HTKY_AUTH] Sign In Dispatch:", data);
@@ -148,7 +149,7 @@ export const MainLayout = () => {
 
       {/* Persistent Static Site Frames */}
       <Header />
-      <Navbar />
+      {!isMakePaymentRoute && <Navbar />}
 
       {/* Dynamic Page Outlet with Isolated Error & Suspense Safety Nets */}
       <main className="flex-grow w-full">
@@ -166,6 +167,8 @@ export const MainLayout = () => {
         isOpen={activeModal === "SIGN_IN"}
         onClose={closeModal}
         logoUrl={modalPayload?.logoUrl}
+        requireOtp={modalPayload?.requireOtp ?? true}
+        redirectTo={modalPayload?.redirectTo || ""}
         onSubmit={handleSignInSubmit}
       />
 
@@ -173,6 +176,7 @@ export const MainLayout = () => {
         isOpen={activeModal === "REGISTER"}
         onClose={closeModal}
         logoUrl={modalPayload?.logoUrl}
+        redirectTo={modalPayload?.redirectTo || ""}
       />
     </div>
   );
