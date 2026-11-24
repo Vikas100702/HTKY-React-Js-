@@ -14,7 +14,7 @@ import {
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useModalStore } from '../../../store/useModalStore';
 
-export const useSignInController = () => {
+export const useSignInController = ({ requireOtp = true, redirectTo = '' } = {}) => {
     const navigate = useNavigate();
     const abortControllerRef = useRef(null);
 
@@ -60,6 +60,11 @@ export const useSignInController = () => {
     };
 
     const handlePostLoginNavigation = (userData) => {
+        if (redirectTo) {
+            navigate(redirectTo);
+            return;
+        }
+
         const isProfileIncomplete = !userData?.firstName || !userData?.addressLine1;
 
         if (isProfileIncomplete) {
@@ -276,6 +281,60 @@ export const useSignInController = () => {
         }
     };
 
+    const handleDirectLoginWithoutOtp = async ({ email = '', phone = '', dialCode = '' }) => {
+        try {
+            setError('');
+            setRegistrationMsg('');
+
+            const cleanEmail = String(email || '').trim();
+            const cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
+
+            if (!cleanEmail && (!cleanPhone || cleanPhone.length < 6)) {
+                setError('Please enter either a valid Email Id or Phone number.');
+                return false;
+            }
+
+            const signal = createAbortSignal();
+            const credentials = cleanEmail ? { email: cleanEmail, phone: '' } : { email: '', phone: cleanPhone };
+
+            // 1. Check if devotee account exists
+            const existRes = await checkExist({ credentials, signal });
+            const userExists = (existRes?.statusCode === 1 || existRes?.statusCode === '1') && Array.isArray(existRes?.data) && existRes.data.length > 0;
+
+            if (!userExists) {
+                setRegistrationMsg('Account not found. Please register as a new devotee.');
+                return false;
+            }
+
+            // 2. Account exists -> Direct Login without OTP
+            const loginRes = await login({ credentials, signal });
+            const userData = loginRes?.data?.[0];
+
+            if (userData && (loginRes?.statusCode === 1 || loginRes?.statusCode === '1')) {
+                const sessionUserData = {
+                    ...userData,
+                    _id: userData._id,
+                    email: cleanEmail || userData.email || '',
+                    token: userData.token || 'verified_member_token',
+                    countryCode: dialCode || userData.contryCode || '+1',
+                    contryCode: dialCode || userData.contryCode || '+1',
+                };
+
+                authLogin(sessionUserData);
+                closeModal();
+                handlePostLoginNavigation(sessionUserData);
+                return true;
+            }
+
+            setError(loginRes?.message || 'Login failed. Please try again.');
+            return false;
+        } catch (err) {
+            if (err?.name === 'CanceledError' || err?.name === 'AbortError') return false;
+            setError(err?.response?.data?.message || err?.message || 'Failed to sign in. Please try again.');
+            return false;
+        }
+    };
+
     const handleSignInSequence = async (formData) => {
         setError('');
         setRegistrationMsg('');
@@ -293,6 +352,17 @@ export const useSignInController = () => {
         const cleanEmail = formData?.email ? String(formData.email).trim() : '';
         const cleanPhone = formData?.phone ? String(formData.phone).replace(/[^0-9]/g, '') : '';
 
+        // Without OTP Mode (Direct account check -> login)
+        if (!requireOtp) {
+            await handleDirectLoginWithoutOtp({
+                email: cleanEmail,
+                phone: cleanPhone,
+                dialCode: formData.countryCode || '+1',
+            });
+            return;
+        }
+
+        // With OTP Mode (Email OTP or Firebase Phone OTP)
         // Email entered -> Email OTP
         if (cleanEmail) {
             await handleSendEmailOtp(cleanEmail);
