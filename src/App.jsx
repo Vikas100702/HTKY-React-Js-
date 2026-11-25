@@ -1,3 +1,765 @@
+// import { lazy, Suspense } from "react";
+// import {
+//   createBrowserRouter,
+//   RouterProvider,
+//   Navigate,
+//   useRouteError,
+// } from "react-router-dom";
+// import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// import { MainLayout } from "./components/layout/MainLayout";
+// import { AuthGuard } from "./components/auth/AuthGuard";
+// import { APP_COLORS } from "./constants/appColors";
+// import { APP_FONTS } from "./constants/appTheme";
+// import { ErrorBoundary } from "./components/shared/ErrorBoundary";
+// import { AccountLayout } from "./components/layout/AccountLayout";
+
+// const queryClient = new QueryClient({
+//   defaultOptions: {
+//     queries: {
+//       staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
+//       gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+//       retry: 2,
+//       refetchOnWindowFocus: false,
+//     },
+//   },
+// });
+
+// const GlobalErrorFallback = () => {
+//   const error = useRouteError();
+
+//   const errorTelemetry = {
+//     timestamp: new Date().toISOString(),
+//     module: "HTKY_ROUTER_ERROR_BOUNDARY",
+//     message:
+//       error?.message || error?.statusText || "Chunk loading or render failure",
+//     status: error?.status || 500,
+//     stack: error?.stack || null,
+//     url: typeof window !== "undefined" ? window.location.href : "unknown",
+//   };
+
+//   console.error("[HTKY_APM][ROUTE_CRASH]", errorTelemetry);
+
+//   return (
+//     <div
+//       className="w-full min-h-screen flex flex-col items-center justify-center p-6 text-center bg-[#faf8f5]"
+//       style={{ fontFamily: APP_FONTS.body }}
+//     >
+//       <div className="w-16 h-16 rounded-full bg-red-50 text-[#900000] border border-red-200 flex items-center justify-center text-2xl font-serif font-bold mb-4 shadow-sm">
+//         ॐ
+//       </div>
+//       <h1
+//         className="text-2xl sm:text-3xl font-serif font-bold mb-3"
+//         style={{ color: APP_COLORS.primary }}
+//       >
+//         Page Failed to Load
+//       </h1>
+//       <p
+//         className="text-sm max-w-md mb-6 leading-relaxed"
+//         style={{ color: APP_COLORS.textSecondary || "#666" }}
+//       >
+//         We encountered a temporary issue displaying this section. Temple
+//         administrators have been alerted.
+//       </p>
+//       <div className="flex items-center gap-3">
+//         <button
+//           type="button"
+//           onClick={() => window.location.reload()}
+//           className="px-5 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-xs cursor-pointer"
+//         >
+//           Reload Page
+//         </button>
+//         <a
+//           href="/"
+//           className="px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-opacity hover:opacity-90"
+//           style={{
+//             backgroundColor: APP_COLORS.primary,
+//             color: APP_COLORS.textInverse,
+//           }}
+//         >
+//           Return to Home
+//         </a>
+//       </div>
+//     </div>
+//   );
+// };
+
+// const RouteSuspenseFallback = () => (
+//   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full animate-pulse space-y-6">
+//     <div className="h-8 bg-gray-200 rounded-lg w-48 mx-auto" />
+//     <div className="h-10 bg-gray-200 rounded-full w-3/4 mx-auto" />
+//     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+//       {[1, 2, 3].map((n) => (
+//         <div key={n} className="h-72 bg-gray-200 rounded-2xl" />
+//       ))}
+//     </div>
+//   </div>
+// );
+
+// const NotFoundFallback = () => (
+//   <div
+//     className="w-full h-[60vh] flex flex-col items-center justify-center font-serif font-bold text-xl sm:text-2xl text-center px-4"
+//     style={{ color: APP_COLORS.primary }}
+//   >
+//     <span>404 - Page Not Found</span>
+//     <a
+//       href="/"
+//       className="mt-4 text-xs font-sans font-bold underline text-amber-700 hover:text-amber-900"
+//     >
+//       Return to Home
+//     </a>
+//   </div>
+// );
+
+// // LAZY LOADED ROUTE IMPORTS
+// const HomePage = lazy(() =>
+//   import("./pages/Home").catch(() => ({
+//     default: () => <div>Home Module Failed to Load</div>,
+//   })),
+// );
+
+// // Events Details Page
+// const EventDetailsPage = lazy(() =>
+//   import("./pages/Events/EventDetails").then((m) => ({
+//     default: m.EventDetails,
+//   })),
+// );
+
+// // Make a Payment Page
+// const MakePaymentPage = lazy(() =>
+//   import("./pages/MakePayment/MakePaymentPage").then((m) => ({
+//     default: m.MakePaymentPage,
+//   })),
+// );
+
+// const DashboardPage = lazy(() =>
+//   import("./pages/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })),
+// );
+
+// const MyPujaBookingsPage = lazy(() =>
+//   import("./pages/Dashboard/MyPujaBookings").then((m) => ({
+//     default: m.MyPujaBookings,
+//   })),
+// );
+
+// const MyDonationsPage = lazy(() =>
+//   import("./pages/Dashboard/MyDonations").then((m) => ({
+//     default: m.MyDonations,
+//   })),
+// );
+
+// const MySponsorsPage = lazy(() =>
+//   import("./pages/Dashboard/MySponsors").then((m) => ({
+//     default: m.MySponsors,
+//   })),
+// );
+
+// const MyPaymentsPage = lazy(() =>
+//   import("./pages/Dashboard/MyPayments").then((m) => ({
+//     default: m.MyPayments,
+//   })),
+// );
+
+// const PaymentReceiptViewPage = lazy(() =>
+//   import("./pages/Dashboard/PaymentReceiptView").then((m) => ({
+//     default: m.PaymentReceiptView,
+//   })),
+// );
+
+// const UserProfilePage = lazy(() =>
+//   import("./pages/Auth/UserProfile").then((m) => ({ default: m.UserProfile })),
+// );
+
+// const MembershipPage = lazy(() =>
+//   import("./pages/Membership/MembershipPage").then((m) => ({
+//     default: m.MembershipPage,
+//   })),
+// );
+
+// // Services Pages
+// const ServicesPage = lazy(() =>
+//   import("./pages/Services/Services").then((m) => ({
+//     default: m.Services,
+//   })),
+// );
+
+// const SponsorshipsPage = lazy(() =>
+//   import("./pages/Sponsorships/Sponsorships").then((m) => ({
+//     default: m.Sponsorships,
+//   })),
+// );
+
+// const SponsorshipsCategoryPage = lazy(() =>
+//   import("./pages/Sponsorships/SponsorshipCategoryServices").then((m) => ({
+//     default: m.SponsorshipCategoryServices,
+//   })),
+// );
+
+// // Calendar Pages
+// const CalendarPage = lazy(() =>
+//   import("./pages/Calendar/CalendarPage").then((m) => ({
+//     default: m.CalendarPage,
+//   })),
+// );
+
+// // Community Events
+// const CommunityEventsPage = lazy(() =>
+//   import("./pages/Calendar/CommunityEvents").then((m) => ({
+//     default: m.CommunityEvents,
+//   })),
+// );
+
+// // Newletters
+// const NewslettersPage = lazy(() =>
+//   import("./pages/Calendar/Newsletters").then((m) => ({
+//     default: m.Newsletters,
+//   })),
+// );
+
+// // General Donation Page
+// const GeneralDonationPage = lazy(() =>
+//   import("./pages/Donations/GeneralDonation").then((m) => ({
+//     default: m.GeneralDonation,
+//   })),
+// );
+
+// // Recurring Donation Page
+// const RecurringDonationPage = lazy(() =>
+//   import("./pages/Donations/RecurringDonation").then((m) => ({
+//     default: m.RecurringDonation,
+//   })),
+// );
+
+// const RecurringDonationCheckoutPage = lazy(() =>
+//   import("./pages/Donations/RecurringDonationCheckout").then((m) => ({
+//     default: m.RecurringDonationCheckout,
+//   })),
+// );
+
+// // Cart & Checkout Pages
+// const CartPage = lazy(() =>
+//   import("./pages/Checkout/Checkout").then((m) => ({
+//     default: m.CartPage,
+//   })),
+// );
+
+// const CheckoutPage = lazy(() =>
+//   import("./pages/Checkout/Checkout").then((m) => ({
+//     default: m.Checkout,
+//   })),
+// );
+
+// const PaymentSuccessPage = lazy(() =>
+//   import("./pages/Checkout/PaymentSuccess").then((m) => ({
+//     default: m.PaymentSuccess,
+//   })),
+// );
+
+// // Education Section
+// const AllClassesPage = lazy(() =>
+//   import("./pages/Education/AllClasses").then((m) => ({
+//     default: m.AllClasses,
+//   })),
+// );
+
+// // Seva Section
+// const VolunteerSignupPage = lazy(() =>
+//   import("./pages/Seva/VolunteerSignUp").then((m) => ({
+//     default: m.VolunteerSignUp,
+//   })),
+// );
+
+// const SeniorProgramPage = lazy(() =>
+//   import("./pages/Seva/SeniorProgram").then((m) => ({
+//     default: m.SeniorProgram,
+//   })),
+// );
+
+// const GriefSupportPage = lazy(() =>
+//   import("./pages/Seva/GriefSupport").then((m) => ({
+//     default: m.GriefSupport,
+//   })),
+// );
+
+// const LostFoundPage = lazy(() =>
+//   import("./pages/Seva/LostFound").then((m) => ({
+//     default: m.LostFound,
+//   })),
+// );
+
+// // About Section
+// const AboutTemplePage = lazy(() =>
+//   import("./pages/About/AboutTemple").then((m) => ({ default: m.AboutTemple })),
+// );
+
+// const AboutDeityPage = lazy(() =>
+//   import("./pages/About/AboutDeity").then((m) => ({ default: m.AboutDeity })),
+// );
+
+// const AboutPriestPage = lazy(() =>
+//   import("./pages/About/AboutPriest").then((m) => ({ default: m.AboutPriest })),
+// );
+
+// const AboutLandDonorPage = lazy(() =>
+//   import("./pages/About/AboutLandDonors").then((m) => ({
+//     default: m.AboutLandDonors,
+//   })),
+// );
+
+// const AboutBoardCommitteePage = lazy(() =>
+//   import("./pages/About/AboutBoardCommittee").then((m) => ({
+//     default: m.AboutBoardCommittee,
+//   })),
+// );
+
+// const AboutEtiquetteVisitsPage = lazy(() =>
+//   import("./pages/About/AboutEtiquetteVisits").then((m) => ({
+//     default: m.AboutEtiquetteVisit,
+//   })),
+// );
+
+// const AboutJainSanghPage = lazy(() =>
+//   import("./pages/About/AboutJainSangh").then((m) => ({
+//     default: m.AboutJainSangh,
+//   })),
+// );
+
+// const AboutShirdiSaiSatsangPage = lazy(() =>
+//   import("./pages/About/AboutShirdiSaiSatsang").then((m) => ({
+//     default: m.AboutShirdiSaiSatsang,
+//   })),
+// );
+
+// // ROUTER CONFIGURATION
+// const router = createBrowserRouter([
+//   {
+//     path: "/",
+//     element: <MainLayout />,
+//     errorElement: <GlobalErrorFallback />,
+//     children: [
+//       {
+//         index: true,
+//         element: (
+//           <Suspense fallback={<RouteSuspenseFallback />}>
+//             <HomePage />
+//           </Suspense>
+//         ),
+//       },
+
+//       // Events Details Page
+//       {
+//         path: "event/:eventSlug/:eventId",
+//         element: (
+//           <ErrorBoundary name="EventDetailsPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <EventDetailsPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // Make a Pyament Page
+//       {
+//         path: "make-a-payment/:serviceId",
+//         element: (
+//           <ErrorBoundary name="MakePaymentPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <MakePaymentPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // General Donation Page Route
+//       {
+//         path: "donations/general",
+//         element: (
+//           <Suspense fallback={<RouteSuspenseFallback />}>
+//             <GeneralDonationPage />
+//           </Suspense>
+//         ),
+//       },
+
+//       // Recurring Donation Page Route
+//       {
+//         path: "recurring-donation",
+//         element: (
+//           <ErrorBoundary name="RecurringDonationPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <RecurringDonationPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // Dedicated Recurring Donation Checkout Route (Isolated from Global Cart)
+//       {
+//         path: "recurring-donation/checkout",
+//         element: (
+//           <ErrorBoundary name="RecurringDonationCheckoutPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <RecurringDonationCheckoutPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // Cart Page Route
+//       {
+//         path: "/cart",
+//         element: (
+//           <Suspense fallback={<RouteSuspenseFallback />}>
+//             <CartPage />
+//           </Suspense>
+//         ),
+//       },
+
+//       // 3. Checkout Page Route (Cart & common checkout tap se yahan aayega)
+//       {
+//         path: "checkout",
+//         element: (
+//           <ErrorBoundary name="CheckoutPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <CheckoutPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // 4. Payment Success & Receipt Route
+//       {
+//         path: "checkout/success",
+//         element: (
+//           <ErrorBoundary name="PaymentSuccessPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <PaymentSuccessPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // Services Route
+//       {
+//         path: "services",
+//         element: (
+//           <Suspense fallback={<RouteSuspenseFallback />}>
+//             <ServicesPage />
+//           </Suspense>
+//         ),
+//       },
+//       {
+//         path: "sponsorships",
+//         element: (
+//           <ErrorBoundary name="SponsorshipsPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <SponsorshipsPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+//       {
+//         path: "sponsorships/:serviceType",
+//         element: (
+//           <ErrorBoundary name="SponsorshipsCategoryPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <SponsorshipsCategoryPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+//       {
+//         path: "book-service",
+//         element: <Navigate to="/services" replace />,
+//       },
+
+//       {
+//         path: "account",
+//         element: (
+//           <AuthGuard>
+//             <AccountLayout />
+//           </AuthGuard>
+//         ),
+//         children: [
+//           {
+//             index: true,
+//             element: <Navigate to="/account/dashboard" replace />,
+//           },
+//           {
+//             path: "dashboard",
+//             element: (
+//               <ErrorBoundary name="DashboardPage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <DashboardPage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//           {
+//             path: "puja-bookings",
+//             element: (
+//               <ErrorBoundary name="MyPujaBookingsPage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <MyPujaBookingsPage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//           {
+//             path: "donations",
+//             element: (
+//               <ErrorBoundary name="MyDonationsPage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <MyDonationsPage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//           {
+//             path: "sponsors",
+//             element: (
+//               <ErrorBoundary name="MySponsorsPage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <MySponsorsPage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//           {
+//             path: "payments",
+//             element: (
+//               <ErrorBoundary name="MyPaymentsPage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <MyPaymentsPage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//           {
+//             path: "payments/receipt/:receiptId",
+//             element: (
+//               <ErrorBoundary name="PaymentReceiptViewPage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <PaymentReceiptViewPage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//           {
+//             path: "profile",
+//             element: (
+//               <ErrorBoundary name="UserProfilePage">
+//                 <Suspense fallback={<RouteSuspenseFallback />}>
+//                   <UserProfilePage />
+//                 </Suspense>
+//               </ErrorBoundary>
+//             ),
+//           },
+//         ],
+//       },
+
+//       {
+//         path: "membership",
+//         element: (
+//           <AuthGuard>
+//             <ErrorBoundary name="MembershipPage">
+//               <Suspense fallback={<RouteSuspenseFallback />}>
+//                 <MembershipPage />
+//               </Suspense>
+//             </ErrorBoundary>
+//           </AuthGuard>
+//         ),
+//       },
+
+//       // Calendar
+//       {
+//         path: "calendar",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <CalendarPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+
+//       // Community Events
+//       {
+//         path: "community-events",
+//         element: (
+//           <ErrorBoundary name="CommunityEventsPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <CommunityEventsPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // News Letters
+//       {
+//         path: "newsletters",
+//         element: (
+//           <ErrorBoundary name="NewslettersPage">
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <NewslettersPage />
+//             </Suspense>
+//           </ErrorBoundary>
+//         ),
+//       },
+
+//       // Education
+//       {
+//         path: "all-classes",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AllClassesPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+
+//       // Seva
+//       {
+//         path: "volunteer-signup",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <VolunteerSignupPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "senior-program",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <SeniorProgramPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "grief-support",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <GriefSupportPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "lost-found",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <LostFoundPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+
+//       // About Section
+//       {
+//         path: "about-temple",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutTemplePage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "about-deities",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutDeityPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "about-priests",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutPriestPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "land-donors",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutLandDonorPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "board-committee-members",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutBoardCommitteePage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "etiquette-visits",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutEtiquetteVisitsPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "jain-sangh",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutJainSanghPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+//       {
+//         path: "shirdi-sai-satsang",
+//         element: (
+//           <AuthGuard>
+//             <Suspense fallback={<RouteSuspenseFallback />}>
+//               <AboutShirdiSaiSatsangPage />
+//             </Suspense>
+//           </AuthGuard>
+//         ),
+//       },
+
+//       // 404 Fallback
+//       {
+//         path: "*",
+//         element: <NotFoundFallback />,
+//       },
+//     ],
+//   },
+// ]);
+
+// export function App() {
+//   return (
+//     <QueryClientProvider client={queryClient}>
+//       <RouterProvider router={router} />
+//     </QueryClientProvider>
+//   );
+// }
+
+// export default App;
+
 import { lazy, Suspense } from "react";
 import {
   createBrowserRouter,
@@ -10,14 +772,15 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { AuthGuard } from "./components/auth/AuthGuard";
 import { APP_COLORS } from "./constants/appColors";
 import { APP_FONTS } from "./constants/appTheme";
+import { ROUTES, toRelativeRoute, toChildRoute } from "./constants/routes";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import { AccountLayout } from "./components/layout/AccountLayout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
-      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: 2,
       refetchOnWindowFocus: false,
     },
@@ -69,7 +832,7 @@ const GlobalErrorFallback = () => {
           Reload Page
         </button>
         <a
-          href="/"
+          href={ROUTES.home}
           className="px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-opacity hover:opacity-90"
           style={{
             backgroundColor: APP_COLORS.primary,
@@ -102,7 +865,7 @@ const NotFoundFallback = () => (
   >
     <span>404 - Page Not Found</span>
     <a
-      href="/"
+      href={ROUTES.home}
       className="mt-4 text-xs font-sans font-bold underline text-amber-700 hover:text-amber-900"
     >
       Return to Home
@@ -117,14 +880,12 @@ const HomePage = lazy(() =>
   })),
 );
 
-// Events Details Page
 const EventDetailsPage = lazy(() =>
   import("./pages/Events/EventDetails").then((m) => ({
     default: m.EventDetails,
   })),
 );
 
-// Make a Payment Page
 const MakePaymentPage = lazy(() =>
   import("./pages/MakePayment/MakePaymentPage").then((m) => ({
     default: m.MakePaymentPage,
@@ -175,7 +936,6 @@ const MembershipPage = lazy(() =>
   })),
 );
 
-// Services Pages
 const ServicesPage = lazy(() =>
   import("./pages/Services/Services").then((m) => ({
     default: m.Services,
@@ -194,35 +954,30 @@ const SponsorshipsCategoryPage = lazy(() =>
   })),
 );
 
-// Calendar Pages
 const CalendarPage = lazy(() =>
   import("./pages/Calendar/CalendarPage").then((m) => ({
     default: m.CalendarPage,
   })),
 );
 
-// Community Events
 const CommunityEventsPage = lazy(() =>
   import("./pages/Calendar/CommunityEvents").then((m) => ({
     default: m.CommunityEvents,
   })),
 );
 
-// Newletters
 const NewslettersPage = lazy(() =>
   import("./pages/Calendar/Newsletters").then((m) => ({
     default: m.Newsletters,
   })),
 );
 
-// General Donation Page
 const GeneralDonationPage = lazy(() =>
   import("./pages/Donations/GeneralDonation").then((m) => ({
     default: m.GeneralDonation,
   })),
 );
 
-// Recurring Donation Page
 const RecurringDonationPage = lazy(() =>
   import("./pages/Donations/RecurringDonation").then((m) => ({
     default: m.RecurringDonation,
@@ -235,7 +990,6 @@ const RecurringDonationCheckoutPage = lazy(() =>
   })),
 );
 
-// Cart & Checkout Pages
 const CartPage = lazy(() =>
   import("./pages/Checkout/Checkout").then((m) => ({
     default: m.CartPage,
@@ -254,14 +1008,12 @@ const PaymentSuccessPage = lazy(() =>
   })),
 );
 
-// Education Section
 const AllClassesPage = lazy(() =>
   import("./pages/Education/AllClasses").then((m) => ({
     default: m.AllClasses,
   })),
 );
 
-// Seva Section
 const VolunteerSignupPage = lazy(() =>
   import("./pages/Seva/VolunteerSignUp").then((m) => ({
     default: m.VolunteerSignUp,
@@ -286,7 +1038,6 @@ const LostFoundPage = lazy(() =>
   })),
 );
 
-// About Section
 const AboutTemplePage = lazy(() =>
   import("./pages/About/AboutTemple").then((m) => ({ default: m.AboutTemple })),
 );
@@ -329,10 +1080,10 @@ const AboutShirdiSaiSatsangPage = lazy(() =>
   })),
 );
 
-// ROUTER CONFIGURATION
+// ROUTER CONFIGURATION (100% Powered by ROUTES)
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: ROUTES.home,
     element: <MainLayout />,
     errorElement: <GlobalErrorFallback />,
     children: [
@@ -347,7 +1098,7 @@ const router = createBrowserRouter([
 
       // Events Details Page
       {
-        path: "event/:eventSlug/:eventId",
+        path: toRelativeRoute(ROUTES.eventDetails),
         element: (
           <ErrorBoundary name="EventDetailsPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -357,9 +1108,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Make a Pyament Page
+      // Make a Payment Page
       {
-        path: "make-a-payment/:serviceId",
+        path: toRelativeRoute(ROUTES.makePayment),
         element: (
           <ErrorBoundary name="MakePaymentPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -371,7 +1122,7 @@ const router = createBrowserRouter([
 
       // General Donation Page Route
       {
-        path: "donations/general",
+        path: toRelativeRoute(ROUTES.generalDonations),
         element: (
           <Suspense fallback={<RouteSuspenseFallback />}>
             <GeneralDonationPage />
@@ -381,7 +1132,7 @@ const router = createBrowserRouter([
 
       // Recurring Donation Page Route
       {
-        path: "recurring-donation",
+        path: toRelativeRoute(ROUTES.recurringDonations),
         element: (
           <ErrorBoundary name="RecurringDonationPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -391,9 +1142,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Dedicated Recurring Donation Checkout Route (Isolated from Global Cart)
+      // Dedicated Recurring Donation Checkout Route
       {
-        path: "recurring-donation/checkout",
+        path: toRelativeRoute(ROUTES.recurringDonationCheckout),
         element: (
           <ErrorBoundary name="RecurringDonationCheckoutPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -405,7 +1156,7 @@ const router = createBrowserRouter([
 
       // Cart Page Route
       {
-        path: "/cart",
+        path: toRelativeRoute(ROUTES.cart),
         element: (
           <Suspense fallback={<RouteSuspenseFallback />}>
             <CartPage />
@@ -413,9 +1164,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // 3. Checkout Page Route (Cart & common checkout tap se yahan aayega)
+      // Checkout Page Route
       {
-        path: "checkout",
+        path: toRelativeRoute(ROUTES.checkout),
         element: (
           <ErrorBoundary name="CheckoutPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -425,9 +1176,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // 4. Payment Success & Receipt Route
+      // Payment Success & Receipt Route
       {
-        path: "checkout/success",
+        path: toRelativeRoute(ROUTES.checkoutSuccess),
         element: (
           <ErrorBoundary name="PaymentSuccessPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -437,9 +1188,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Services Route
+      // Services & Sponsorships Routes
       {
-        path: "services",
+        path: toRelativeRoute(ROUTES.services),
         element: (
           <Suspense fallback={<RouteSuspenseFallback />}>
             <ServicesPage />
@@ -447,7 +1198,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "sponsorships",
+        path: toRelativeRoute(ROUTES.sponsorships),
         element: (
           <ErrorBoundary name="SponsorshipsPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -457,7 +1208,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "sponsorships/:serviceType",
+        path: toRelativeRoute(ROUTES.sponsorshipsCategory),
         element: (
           <ErrorBoundary name="SponsorshipsCategoryPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -467,12 +1218,13 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "book-service",
-        element: <Navigate to="/services" replace />,
+        path: toRelativeRoute(ROUTES.bookService),
+        element: <Navigate to={ROUTES.services} replace />,
       },
 
+      // Protected Account Dashboard Routes
       {
-        path: "account",
+        path: toRelativeRoute(ROUTES.account),
         element: (
           <AuthGuard>
             <AccountLayout />
@@ -481,10 +1233,10 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/account/dashboard" replace />,
+            element: <Navigate to={ROUTES.accountDashboard} replace />,
           },
           {
-            path: "dashboard",
+            path: toChildRoute(ROUTES.accountDashboard, ROUTES.account),
             element: (
               <ErrorBoundary name="DashboardPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -494,7 +1246,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "puja-bookings",
+            path: toChildRoute(ROUTES.accountPujaBookings, ROUTES.account),
             element: (
               <ErrorBoundary name="MyPujaBookingsPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -504,7 +1256,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "donations",
+            path: toChildRoute(ROUTES.accountDonations, ROUTES.account),
             element: (
               <ErrorBoundary name="MyDonationsPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -514,7 +1266,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "sponsors",
+            path: toChildRoute(ROUTES.accountSponsors, ROUTES.account),
             element: (
               <ErrorBoundary name="MySponsorsPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -524,7 +1276,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "payments",
+            path: toChildRoute(ROUTES.accountPayments, ROUTES.account),
             element: (
               <ErrorBoundary name="MyPaymentsPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -534,7 +1286,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "payments/receipt/:receiptId",
+            path: toChildRoute(ROUTES.accountPaymentReceipt, ROUTES.account),
             element: (
               <ErrorBoundary name="PaymentReceiptViewPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -544,7 +1296,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "profile",
+            path: toChildRoute(ROUTES.accountProfile, ROUTES.account),
             element: (
               <ErrorBoundary name="UserProfilePage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
@@ -556,8 +1308,19 @@ const router = createBrowserRouter([
         ],
       },
 
+      // Legacy /profile and /dashboard redirects
       {
-        path: "membership",
+        path: toRelativeRoute(ROUTES.legacyProfile),
+        element: <Navigate to={ROUTES.accountProfile} replace />,
+      },
+      {
+        path: toRelativeRoute(ROUTES.legacyDashboard),
+        element: <Navigate to={ROUTES.accountDashboard} replace />,
+      },
+
+      // Membership
+      {
+        path: toRelativeRoute(ROUTES.membership),
         element: (
           <AuthGuard>
             <ErrorBoundary name="MembershipPage">
@@ -569,9 +1332,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Calendar
+      // Calendar & Community
       {
-        path: "calendar",
+        path: toRelativeRoute(ROUTES.calendar),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -580,10 +1343,8 @@ const router = createBrowserRouter([
           </AuthGuard>
         ),
       },
-
-      // Community Events
       {
-        path: "community-events",
+        path: toRelativeRoute(ROUTES.communityEvents),
         element: (
           <ErrorBoundary name="CommunityEventsPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -592,10 +1353,8 @@ const router = createBrowserRouter([
           </ErrorBoundary>
         ),
       },
-
-      // News Letters
       {
-        path: "newsletters",
+        path: toRelativeRoute(ROUTES.newsletters),
         element: (
           <ErrorBoundary name="NewslettersPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -607,7 +1366,7 @@ const router = createBrowserRouter([
 
       // Education
       {
-        path: "all-classes",
+        path: toRelativeRoute(ROUTES.allClasses),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -619,7 +1378,7 @@ const router = createBrowserRouter([
 
       // Seva
       {
-        path: "volunteer-signup",
+        path: toRelativeRoute(ROUTES.volunteerSignUp),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -629,7 +1388,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "senior-program",
+        path: toRelativeRoute(ROUTES.seniorPage),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -639,7 +1398,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "grief-support",
+        path: toRelativeRoute(ROUTES.griefSupport),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -649,7 +1408,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "lost-found",
+        path: toRelativeRoute(ROUTES.lostAndFound),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -661,7 +1420,7 @@ const router = createBrowserRouter([
 
       // About Section
       {
-        path: "about-temple",
+        path: toRelativeRoute(ROUTES.aboutTemple),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -671,7 +1430,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "about-deities",
+        path: toRelativeRoute(ROUTES.aboutDeities),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -681,7 +1440,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "about-priests",
+        path: toRelativeRoute(ROUTES.aboutPriests),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -691,7 +1450,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "land-donors",
+        path: toRelativeRoute(ROUTES.landDonors),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -701,7 +1460,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "board-committee-members",
+        path: toRelativeRoute(ROUTES.committeeMembers),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -711,7 +1470,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "etiquette-visits",
+        path: toRelativeRoute(ROUTES.etiquetteAndVisits),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -721,7 +1480,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "jain-sangh",
+        path: toRelativeRoute(ROUTES.jainSangh),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -731,7 +1490,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "shirdi-sai-satsang",
+        path: toRelativeRoute(ROUTES.shirsiSaiSatsang),
         element: (
           <AuthGuard>
             <Suspense fallback={<RouteSuspenseFallback />}>
@@ -743,7 +1502,7 @@ const router = createBrowserRouter([
 
       // 404 Fallback
       {
-        path: "*",
+        path: ROUTES.notFound,
         element: <NotFoundFallback />,
       },
     ],
