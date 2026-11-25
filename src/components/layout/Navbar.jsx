@@ -8,31 +8,30 @@ import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useModalStore } from "../../store/useModalStore";
+import { ROUTES } from "../../constants/routes";
 
 const resolveSafePath = (item) => {
-  if (!item) return "/";
+  if (!item) return ROUTES.home;
 
   const title = (item.title || "").trim().toUpperCase();
 
-  // Canonical fallback mappings for Donation sub-items
   if (title === "GENERAL DONATION" || title === "GENERAL DONATIONS") {
-    return item.path && item.path !== "/" ? item.path : "/donations/general";
+    return ROUTES.generalDonations;
   }
   if (title === "RECURRING DONATION" || title === "RECURRING DONATIONS") {
-    return item.path && item.path !== "/" ? item.path : "/donations/recurring";
+    return ROUTES.recurringDonations;
   }
-
   if (title === "MY ACCOUNT") {
-    return "/account/dashboard";
+    return ROUTES.myAccount;
   }
   if (title === "LOGOUT") {
     return "#logout";
   }
 
   const isHome = title === "HOME";
-  const rawPath = item.path || "/";
+  const rawPath = item.path || ROUTES.home;
 
-  if (rawPath === "/" && !isHome) {
+  if (rawPath === ROUTES.home && !isHome) {
     return `#${item.id || item._id || "menu"}`;
   }
 
@@ -56,7 +55,7 @@ export const Navbar = () => {
       openModal("SIGN_IN");
       return;
     }
-    navigate("/checkout");
+    navigate(ROUTES.checkout);
   };
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
