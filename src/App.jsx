@@ -954,6 +954,12 @@ const SponsorshipsCategoryPage = lazy(() =>
   })),
 );
 
+const FacilitiesPage = lazy(() =>
+  import("./pages/Facilities/FacilitiesPage").then((m) => ({
+    default: m.FacilitiesPage,
+  })),
+);
+
 const CalendarPage = lazy(() =>
   import("./pages/Calendar/CalendarPage").then((m) => ({
     default: m.CalendarPage,
@@ -1359,6 +1365,18 @@ const router = createBrowserRouter([
           <ErrorBoundary name="NewslettersPage">
             <Suspense fallback={<RouteSuspenseFallback />}>
               <NewslettersPage />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
+
+      // Facilities
+      {
+        path: toRelativeRoute(ROUTES.facilities),
+        element: (
+          <ErrorBoundary name="FacilitiesPage">
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <FacilitiesPage />
             </Suspense>
           </ErrorBoundary>
         ),
