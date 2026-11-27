@@ -1,5 +1,15 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, User, Home, Flame, HandHeart, Sparkles, CreditCard } from "lucide-react";
+import {
+  LayoutDashboard,
+  User,
+  Home,
+  Flame,
+  HandHeart,
+  Sparkles,
+  CreditCard,
+  Repeat,
+  FileSpreadsheet,
+} from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { APP_COLORS } from "../../constants/appColors";
 
@@ -33,6 +43,18 @@ const ACCOUNT_MENU_ITEMS = [
     label: "My Payments",
     path: "/account/payments",
     icon: CreditCard,
+  },
+  {
+    id: "recurring-donations",
+    label: "Recurring Donations",
+    path: "/account/recurring-donations",
+    icon: Repeat,
+  },
+  {
+    id: "yearly-tax-letter",
+    label: "Yearly Tax Letter",
+    path: "/account/yearly-tax-letter",
+    icon: FileSpreadsheet,
   },
   {
     id: "profile",
