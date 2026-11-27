@@ -66,7 +66,9 @@ export const transformCartItemsForServer = (items) => {
             startDate: item.startDate || (Array.isArray(item.selectedDates) ? item.selectedDates[0] || '' : ''),
             qty,
             time: item.time || item.selectedTime || item.startTime || '',
-            bookingType: item.bookingType || '',
+            startTime: item.startTime || item.selectedTime || item.time || '',
+            endTime: item.endTime || '',
+            bookingType: item.bookingType || item.bookingTypes || item.selectedTierKey || '',
             serviceAddress: item.serviceAddress || '',
             day: item?.dayTypes || '',
             cartCreDate,
@@ -190,6 +192,7 @@ const mapItemTypeToCartCategory = (itemType) => {
     if (type === 'DONATION') return 'donation';
     if (type === 'EVENT') return 'event';
     if (type === 'SAREE') return 'saree';
+    if (type.includes('FACILITY') || type === 'RENTAL' || type === 'RENTALS') return 'facilities';
     return 'services';
 };
 
@@ -209,6 +212,8 @@ export const useFinalizeOrder = () => {
                 mpiInvNumber,
                 transactionId,
                 cartItems = [],
+                eventDetail = {},
+                serviceDetail = {}
             },
             { signal } = {}
         ) => {
@@ -239,7 +244,8 @@ export const useFinalizeOrder = () => {
                 prsnEmail,
                 prsnPhone,
                 data: normalizedData,
-                eventDetail: {},
+                eventDetail: eventDetail || {},
+                serviceDetail: serviceDetail || {},
                 paymentType: 'CREDIT CARD',
                 paymentSource,
                 etKitchenTIp: '0',
@@ -303,8 +309,158 @@ export const useFinalizeOrder = () => {
         },
         onSuccess: (_, variables) => {
             if (variables.status === 'COMPLETED') {
-                clearCart();
+                if (!variables.skipCartClear) {
+                    clearCart();
+                }
                 queryClient.invalidateQueries({ queryKey: ['cartSession'] });
+                queryClient.invalidateQueries({ queryKey: ['devoteeBookings'] });
+                queryClient.invalidateQueries({ queryKey: ['cumulativeAmount'] });
+                queryClient.invalidateQueries({ queryKey: ['devoteeDetails'] });
+            }
+        },
+    });
+};
+
+export const useFinalizeFacilityOrder = () => {
+    const queryClient = useQueryClient();
+    const user = useAuthStore((state) => state.user);
+
+    return useMutation({
+        mutationFn: async (
+            {
+                status = 'COMPLETED',
+                acharyaSambhavana = 0,
+                generalDonation = 0,
+                totalPrice = 0,
+                securityDeposit = 0,
+                mpiInvNumber = '',
+                transactionId = '',
+                cartItems = [],
+                eventDetail = {},
+                serviceDetail = {},
+            },
+            { signal } = {}
+        ) => {
+            const { cartCreDate, cartCreTime } = getFormattedCartTimestamp();
+
+            const memberId = user?._id || user?.id || user?.memberId || '';
+            const memberName =
+                user?.refDataName ||
+                `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+                'Devotee';
+            const prsnEmail = user?.email || '';
+            const prsnPhone = user?.phone || '';
+
+            const formattedRentals = (Array.isArray(cartItems) ? cartItems : []).map((item) => {
+                const rawQty = Math.max(1, Number(item.quantity || item.qty || 1));
+                const originalUnit = Number(
+                    item.oldServiceAmount ?? item.originalUnitPrice ?? item.amount ?? 0
+                );
+                const unitDiscount = Number(item.discountedAmount ?? 0);
+                const finalUnit = Number(
+                    item.unitPrice !== undefined
+                        ? item.unitPrice
+                        : Math.max(0, originalUnit - unitDiscount)
+                );
+
+                const formattedFinal = finalUnit.toFixed(2);
+                const formattedOld = originalUnit.toFixed(2);
+                const hasStartDate = Boolean(item.startDate);
+                const hasTimeWindow = Boolean(item.startTime || item.endTime);
+
+                return {
+                    _id: String(item.id || item._id || ''),
+                    ServiceId: String(item.serviceId || item.id || item._id || ''),
+                    serviceName: String(item.refDataName || item.title || item.name || ''),
+                    serviceCategory: String(item.serviceCategoryTypes || item.category || 'FACILITIES'),
+                    serviceType: String(item.serviceTypes || 'RENTALS'),
+                    serviceAmount: formattedFinal,
+                    costPerDay: formattedFinal,
+                    startDate: hasStartDate ? String(item.startDate) : null,
+                    qty: String(rawQty),
+                    time: null,
+                    day: String(item.dayTypes || ''),
+                    bookingTypes: String(
+                        item.bookingTypes || item.bookingType || item.selectedTierKey || ''
+                    ),
+                    oldServiceAmount: formattedOld,
+                    discountedAmount: unitDiscount,
+                    couponCode: '',
+                    couponId: '',
+                    startTime: hasTimeWindow ? String(item.startTime || item.time || '') : null,
+                    endTime: hasTimeWindow ? String(item.endTime || '') : null,
+                };
+            });
+
+            const addRentalPayload = {
+                productId: ENV_CONFIG.PRODUCT_ID,
+                clientId: ENV_CONFIG.CLIENT_ID,
+                memberId,
+                memberName,
+                prsnEmail,
+                prsnPhone,
+                eventDetail: eventDetail || {},
+                serviceDetail: serviceDetail || {},
+                deliveryDetails: {},
+                deliveryTime: '',
+                paymentType: 'CREDIT CARD',
+                deliveryDate: '',
+                delivery: '',
+                etKitchenTIp: '',
+                pickupTime: '',
+                bankName: '',
+                chequeNo: '',
+                chequeAmount: '',
+                chequeDate: '',
+                source: 'WEBSITE',
+                totalAmount: Number(totalPrice || 0),
+                securityDeposit: Number(securityDeposit || 0),
+                transactionId: String(transactionId || ''),
+                stationName: '',
+                stationId: '',
+                userId: memberName,
+                data: formattedRentals,
+                cartCreDate,
+                cartCreTime,
+                serviceImage: '',
+                serviceName: '',
+                serviceCategory: '',
+                serviceType: '',
+                qty: '',
+                startTime: '',
+                endTime: '',
+                uniteType: '',
+                costPerUnitType: '',
+                serviceAmount: '',
+                userName: '',
+                beneName: '',
+                acharyasanbhavana: Number(acharyaSambhavana || 0),
+                generaldonations: Number(generalDonation || 0),
+                bookingType: 'BOOKING WITH PAYMENT',
+                paymentStatus: status,
+                mpiInvNumber: String(mpiInvNumber || ''),
+            };
+
+            const response = await apiClient.post(
+                ENDPOINTS.ADD_RENTAL_SERVICE_CART,
+                addRentalPayload,
+                { signal }
+            );
+
+            const unpacked = response?.data || response;
+            const record = Array.isArray(unpacked?.data)
+                ? unpacked.data[0]
+                : Array.isArray(unpacked)
+                    ? unpacked[0]
+                    : unpacked;
+
+            return {
+                addToCart: unpacked,
+                invoiceNo: record?.invoiceNo || mpiInvNumber,
+            };
+        },
+        onSuccess: (_, variables) => {
+            if (variables.status === 'COMPLETED') {
                 queryClient.invalidateQueries({ queryKey: ['devoteeBookings'] });
                 queryClient.invalidateQueries({ queryKey: ['cumulativeAmount'] });
                 queryClient.invalidateQueries({ queryKey: ['devoteeDetails'] });
@@ -337,6 +493,7 @@ export const useCheckout = () => {
     const processMpi = useProcessMpiPayment();
     const processNmi = useProcessNmiPayment();
     const finalizeOrder = useFinalizeOrder();
+    const finalizeFacilityOrder = useFinalizeFacilityOrder();
     const removeExpired = useRemoveExpiredServices();
 
     const isProcessing =
@@ -345,6 +502,7 @@ export const useCheckout = () => {
         processMpi.isPending ||
         processNmi.isPending ||
         finalizeOrder.isPending ||
+        finalizeFacilityOrder.isPending ||
         removeExpired.isPending;
 
     return {
@@ -353,6 +511,7 @@ export const useCheckout = () => {
         processMpiPayment: processMpi.mutateAsync,
         processNmiPayment: processNmi.mutateAsync,
         finalizeOrder: finalizeOrder.mutateAsync,
+        finalizeFacilityOrder: finalizeFacilityOrder.mutateAsync,
         removeExpiredServices: removeExpired.mutateAsync,
         isProcessing,
         errors: {
@@ -360,7 +519,7 @@ export const useCheckout = () => {
             tempCartError: addTempCart.error,
             mpiError: processMpi.error,
             nmiError: processNmi.error,
-            finalizeError: finalizeOrder.error,
+            finalizeError: finalizeOrder.error || finalizeFacilityOrder.error,
         },
     };
 };
