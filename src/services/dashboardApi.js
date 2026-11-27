@@ -41,7 +41,6 @@ export const fetchCumulativeAmount = async (
         payload,
         {
             signal,
-            pre: true,
         }
     );
 
@@ -126,56 +125,57 @@ export const fetchServiceScheduleSummary = async (
         records,
         bookings: records,
         dateRange: { startDate: resolvedStart, endDate: resolvedEnd },
-    };}
+    };
+}
 
-    /**
- * Safely unwraps nested `{ data: { ... } }` or `{ result: { ... } }` envelopes
- * without mistaking a `data: [...]` records array for the envelope wrapper.
+/**
+* Safely unwraps nested `{ data: { ... } }` or `{ result: { ... } }` envelopes
+* without mistaking a `data: [...]` records array for the envelope wrapper.
+*
+* @param {any} rawResponse
+* @returns {Object}
+*/
+const unwrapApiEnvelope = (rawResponse) => {
+    const step1 =
+        rawResponse &&
+            typeof rawResponse === "object" &&
+            !Array.isArray(rawResponse) &&
+            rawResponse.data &&
+            typeof rawResponse.data === "object" &&
+            !Array.isArray(rawResponse.data)
+            ? rawResponse.data
+            : rawResponse ?? {};
+
+    return step1?.result &&
+        typeof step1.result === "object" &&
+        !Array.isArray(step1.result)
+        ? step1.result
+        : step1;
+};
+
+/**
+ * Resolves total record count using explicit `Count` / `count` when valid,
+ * falling back to `records.length` if the count key is omitted or mismatched.
  *
- * @param {any} rawResponse
- * @returns {Object}
+ * @param {Object} root
+ * @param {Array<Object>} records
+ * @returns {number}
  */
-    const unwrapApiEnvelope = (rawResponse) => {
-        const step1 =
-            rawResponse &&
-                typeof rawResponse === "object" &&
-                !Array.isArray(rawResponse) &&
-                rawResponse.data &&
-                typeof rawResponse.data === "object" &&
-                !Array.isArray(rawResponse.data)
-                ? rawResponse.data
-                : rawResponse ?? {};
-
-        return step1?.result &&
-            typeof step1.result === "object" &&
-            !Array.isArray(step1.result)
-            ? step1.result
-            : step1;
-    };
-
-    /**
-     * Resolves total record count using explicit `Count` / `count` when valid,
-     * falling back to `records.length` if the count key is omitted or mismatched.
-     *
-     * @param {Object} root
-     * @param {Array<Object>} records
-     * @returns {number}
-     */
-    const resolveRecordCount = (root, records) => {
-        const rawCount = root?.Count ?? root?.count;
-        const parsedCount = Number(rawCount);
-        if (
-            rawCount !== undefined &&
-            rawCount !== null &&
-            String(rawCount).trim() !== "" &&
-            Number.isFinite(parsedCount)
-        ) {
-            return parsedCount === 0 && records.length > 0
-                ? records.length
-                : Math.max(0, Math.floor(parsedCount));
-        }
-        return records.length;
-    };
+const resolveRecordCount = (root, records) => {
+    const rawCount = root?.Count ?? root?.count;
+    const parsedCount = Number(rawCount);
+    if (
+        rawCount !== undefined &&
+        rawCount !== null &&
+        String(rawCount).trim() !== "" &&
+        Number.isFinite(parsedCount)
+    ) {
+        return parsedCount === 0 && records.length > 0
+            ? records.length
+            : Math.max(0, Math.floor(parsedCount));
+    }
+    return records.length;
+};
 
 
 
