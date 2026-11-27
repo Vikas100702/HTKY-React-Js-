@@ -1,3 +1,662 @@
+// import { useState, useRef, useEffect, useMemo } from "react";
+// import { useServicesStore } from "../../store/useServicesStore";
+// import { useGetDieties } from "../../hooks/queries/Services/Book_Services/useGetDieties";
+// import { useCartStore } from "../../store/useCartStore";
+// import {
+//   checkIsServiceGreyScale,
+//   calculateAvailableDates,
+//   getSelectedOccurrences,
+//   formatSlashDate,
+// } from "../../utils/serviceDateUtils";
+// import {
+//   fetchServiceAvailability,
+//   fetchTithiDates,
+//   IN_TEMPLE_CATEGORY,
+// } from "../../hooks/queries/Services/Book_Services/useGetServices";
+// import { ServiceDatePickerModal } from "../services/ServiceDatePickerModal";
+// import { ServiceTimePickerModal } from "../services/ServiceTimePickerModal";
+// import useRecurringCartStore from "../../store/useRecurringCartStore";
+
+// const TITHI_KEYWORDS = Object.freeze([
+//   "PRATIPADA",
+//   "DWITIYA",
+//   "TRITIYA",
+//   "CHATURTHI",
+//   "PANCHAMI",
+//   "SHASHDI",
+//   "SAPTAMI",
+//   "ASHTAMI",
+//   "NAVAMI",
+//   "DASHAMI",
+//   "EKADASHI",
+//   "DWADASHI",
+//   "TRAYODASHI",
+//   "CHATURDASHI",
+//   "PURNIMA",
+//   "AMAVASYA",
+// ]);
+
+// const FALLBACK_IMAGE =
+//   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240"><rect width="400" height="240" fill="%23fdf6ee"/><text x="50%" y="48%" font-family="serif" font-size="20" font-weight="bold" fill="%23900000" text-anchor="middle">HTKY TEMPLE</text><text x="50%" y="62%" font-family="sans-serif" font-size="12" fill="%23854d0e" text-anchor="middle">Temple Service</text></svg>';
+
+// export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
+//   const serviceKey = service.id;
+//   const isGrey = checkIsServiceGreyScale(service);
+//   const abortControllerRef = useRef(null);
+//   const isMountedRef = useRef(true);
+
+//   const resolvedCategoryRaw = String(
+//     service.serviceCategoryTypes || service.rawItem?.serviceCategoryTypes || "",
+//   ).toUpperCase();
+//   const resolvedServiceTypeRaw = String(
+//     service.serviceTypes || service.rawItem?.serviceTypes || "",
+//   ).toUpperCase();
+
+//   const isDonationItem =
+//     resolvedCategoryRaw.includes("DONATION") ||
+//     resolvedServiceTypeRaw.includes("DONATION");
+//   const isRecurringDonation =
+//     resolvedServiceTypeRaw.includes("RECURRING") ||
+//     resolvedCategoryRaw.includes("RECURRING");
+
+//   const globalInsertItem = useCartStore(
+//     (state) => state.insertItem || state.addItem || state.upsertItem,
+//   );
+//   const globalRemoveItem = useCartStore((state) => state.removeItem);
+//   const globalUpdateQuantity = useCartStore((state) => state.updateQuantity);
+//   const globalCartItems = useCartStore((state) => state.items || []);
+
+//   const recurringInsertItem = useRecurringCartStore(
+//     (state) => state.insertItem || state.addItem,
+//   );
+//   const recurringRemoveItem = useRecurringCartStore(
+//     (state) => state.removeItem,
+//   );
+//   const recurringCartItems = useRecurringCartStore(
+//     (state) => state.items || [],
+//   );
+
+//   const insertItem = isRecurringDonation
+//     ? recurringInsertItem
+//     : globalInsertItem;
+//   const removeItemFromCart = isRecurringDonation
+//     ? recurringRemoveItem
+//     : globalRemoveItem;
+//   const updateQuantityInCart = isRecurringDonation
+//     ? () => {}
+//     : globalUpdateQuantity;
+//   const cartItems = isRecurringDonation ? recurringCartItems : globalCartItems;
+
+//   const showQtyCounter = !isDonationItem && Boolean(service.qtyCounterEnabled);
+
+//   const isCheckedInCart = cartItems.some((item) => item.id === serviceKey);
+
+//   // Master Diety list from API
+//   const { data: masterDieties = [], isLoading: isDietiesLoading } =
+//     useGetDieties();
+
+//   // Zustand State Selectors
+//   const categoryQuantitiesMap = useServicesStore(
+//     (state) => state.categoryQuantitiesMap,
+//   );
+//   const selectedDatesMap = useServicesStore((state) => state.selectedDatesMap);
+//   const selectedTimeMap = useServicesStore((state) => state.selectedTimeMap);
+//   const selectedDietyMap = useServicesStore(
+//     (state) => state.selectedDietyMap || {},
+//   );
+//   const activeModal = useServicesStore((state) => state.activeModal);
+//   const activeModalServiceId = useServicesStore(
+//     (state) => state.activeModalServiceId,
+//   );
+//   const customAmountMap = useServicesStore((state) => state.customAmountMap);
+//   const updateCustomAmount = useServicesStore(
+//     (state) => state.updateCustomAmount,
+//   );
+//   const parsedServiceAmount =
+//     parseFloat(
+//       String(service?.amount ?? service?.serviceAmount ?? "0").replace(
+//         /[^0-9.]/g,
+//         "",
+//       ),
+//     ) || 0;
+//   const isCustomAmount = parsedServiceAmount <= 0;
+
+//   // Zustand Store Actions
+//   const toggleCheckbox = useServicesStore((state) => state.toggleCheckbox);
+//   const incrementQuantity = useServicesStore(
+//     (state) => state.incrementQuantity,
+//   );
+//   const decrementQuantity = useServicesStore(
+//     (state) => state.decrementQuantity,
+//   );
+//   const updateSelectedDates = useServicesStore(
+//     (state) => state.updateSelectedDates,
+//   );
+//   const updateSelectedTime = useServicesStore(
+//     (state) => state.updateSelectedTime,
+//   );
+//   const updateSelectedDiety = useServicesStore(
+//     (state) => state.updateSelectedDiety,
+//   );
+//   const clearServiceSelection = useServicesStore(
+//     (state) => state.clearServiceSelection,
+//   );
+
+//   const openModal = useServicesStore((state) => state.openModal);
+//   const closeModal = useServicesStore((state) => state.closeModal);
+//   const showToast = useServicesStore((state) => state.showToast);
+
+//   const cartItem = cartItems.find(
+//     (item) => (item.id || item._id) === serviceKey,
+//   );
+//   const quantity = cartItem
+//     ? Number(cartItem.quantity) || 1
+//     : categoryQuantitiesMap[serviceKey] || 1;
+//   const selectedDates = selectedDatesMap[serviceKey] || [];
+//   const selectedTime = selectedTimeMap[serviceKey] || "";
+//   const selectedDiety = selectedDietyMap[serviceKey] || "";
+
+//   const [availableDatesList, setAvailableDatesList] = useState([]);
+//   const [availabilityMap, setAvailabilityMap] = useState({});
+//   const [isSlotLoading, setIsSlotLoading] = useState(false);
+//   const [imageError, setImageError] = useState(false);
+
+//   const isDTVisible = Boolean(service?.isDTVisible);
+//   const isTimeVisible = Boolean(service?.isTimeVisible);
+//   const isDietyDropdownVisible = Boolean(service?.isDietySelected);
+
+//   // Compute Diety Dropdown Options
+//   const dietyOptions = useMemo(() => {
+//     if (!isDietyDropdownVisible) return [];
+
+//     const rawDiety = service?.dietyName;
+//     if (typeof rawDiety === "string" && rawDiety.trim().length > 0) {
+//       return rawDiety
+//         .split(/[,&]/)
+//         .map((d) => d.trim())
+//         .filter(Boolean);
+//     }
+
+//     if (Array.isArray(rawDiety) && rawDiety.length > 0) {
+//       return rawDiety.map((d) => String(d).trim()).filter(Boolean);
+//     }
+
+//     return masterDieties
+//       .map((d) => (typeof d === "string" ? d : d?.name || d?.refDataName || ""))
+//       .map((name) => String(name).trim())
+//       .filter(Boolean);
+//   }, [isDietyDropdownVisible, service?.dietyName, masterDieties]);
+
+//   useEffect(() => {
+//     isMountedRef.current = true;
+//     return () => {
+//       isMountedRef.current = false;
+//       if (abortControllerRef.current) abortControllerRef.current.abort();
+//     };
+//   }, []);
+
+//   const handleDateTap = async () => {
+//     if (abortControllerRef.current) abortControllerRef.current.abort();
+//     abortControllerRef.current = new AbortController();
+//     const signal = abortControllerRef.current.signal;
+
+//     try {
+//       setIsSlotLoading(true);
+//       let slotsMap = {};
+
+//       if (service.bookingLimitPerDay > 0) {
+//         slotsMap = await fetchServiceAvailability(
+//           {
+//             serviceSetup: service.title,
+//             startDate: service.startDate || "",
+//             endDate: service.endDate || "",
+//             serviceTypes: service.serviceTypes || IN_TEMPLE_CATEGORY,
+//           },
+//           signal,
+//         );
+//         if (isMountedRef.current) setAvailabilityMap(slotsMap);
+//       }
+
+//       const dayTypesUpper = (service.dayTypes || "").toUpperCase();
+//       const matchedTithi = TITHI_KEYWORDS.find((t) =>
+//         dayTypesUpper.includes(t),
+//       );
+
+//       let dates = [];
+//       if (matchedTithi) {
+//         dates = await fetchTithiDates(matchedTithi, signal);
+//       } else {
+//         dates = calculateAvailableDates({
+//           dayTypes: service.dayTypes,
+//           startDate: service.startDate,
+//           endDate: service.endDate,
+//           bookingLimitPerDay: service.bookingLimitPerDay,
+//           holdingDates: service.holdingDates,
+//           availabilityMap: slotsMap,
+//         });
+//       }
+
+//       if (isMountedRef.current) {
+//         setAvailableDatesList(dates);
+//         openModal("DATE_PICKER", serviceKey);
+//       }
+//     } catch (err) {
+//       if (err?.name !== "AbortError" && err?.name !== "CanceledError") {
+//         showToast("Unable to load booking slots. Please try again.", "error");
+//       }
+//     } finally {
+//       if (isMountedRef.current) setIsSlotLoading(false);
+//     }
+//   };
+
+//   const handleTimeTap = () => {
+//     if (isDTVisible && selectedDates.length === 0) {
+//       showToast("Please select a date before choosing a time.", "warning");
+//       return;
+//     }
+//     openModal("TIME_PICKER", serviceKey);
+//   };
+
+//   const handleCheckboxChange = (e) => {
+//     const checked = e.target.checked;
+
+//     if (checked) {
+//       // Deity validation check
+//       if (isDietyDropdownVisible && !selectedDiety) {
+//         showToast("Please select a diety from the dropdown.", "warning");
+//         return;
+//       }
+
+//       // Date validation check
+//       if (isDTVisible && selectedDates.length === 0) {
+//         showToast(
+//           "Please select a date to proceed with this service.",
+//           "warning",
+//         );
+//         return;
+//       }
+
+//       // Add the item to the global cart store
+//       // Flexible / Custom Amount validation check
+//       const rawInputAmt =
+//         customAmountMap[serviceKey] !== undefined
+//           ? customAmountMap[serviceKey]
+//           : cartItem?.amount || 0;
+//       const finalPrice =
+//         parsedServiceAmount > 0
+//           ? parsedServiceAmount
+//           : parseFloat(rawInputAmt || 0);
+
+//       if (isCustomAmount && (!Number.isFinite(finalPrice) || finalPrice <= 0)) {
+//         showToast(
+//           "Please enter a valid offering amount before selecting this item.",
+//           "warning",
+//         );
+//         return;
+//       }
+
+//       const resolvedCategoryType =
+//         service.serviceCategoryTypes ||
+//         service.rawItem?.serviceCategoryTypes ||
+//         "IN-TEMPLE";
+//       const upperCat = String(resolvedCategoryType).toUpperCase();
+//       const isSponsorshipItem = upperCat.includes("SPONSOR");
+//       const isDonationItem = upperCat.includes("DONATION");
+//       const isEventItem = upperCat.includes("EVENT");
+
+//       const resolvedDisplayCategory = isSponsorshipItem
+//         ? "SPONSORSHIP"
+//         : isDonationItem
+//           ? String(service.serviceTypes || "RECURRING DONATIONS").toUpperCase()
+//           : isEventItem
+//             ? "EVENT"
+//             : "SERVICE";
+
+//       const resolvedItemType = isSponsorshipItem
+//         ? "SPONSORSHIP"
+//         : isDonationItem
+//           ? "DONATION"
+//           : isEventItem
+//             ? "EVENT"
+//             : "SERVICE";
+
+//       const cartPayload = {
+//         id: service.id,
+//         title: service.title,
+//         refDataName: service.title,
+//         amount: finalPrice,
+//         quantity: isDonationItem ? 0 : quantity || 1,
+//         qtyCounterEnabled: isDonationItem
+//           ? false
+//           : Boolean(service.qtyCounterEnabled),
+//         image: service.imageUrl || "",
+//         category: resolvedDisplayCategory,
+//         itemType: resolvedItemType,
+//         serviceCategoryTypes: resolvedCategoryType,
+//         serviceTypes:
+//           service.serviceTypes || service.rawItem?.serviceTypes || "",
+//         bookingType: service.bookingType || service.rawItem?.bookingType || "",
+//         dayTypes: service?.dayTypes || service.rawItem?.dayTypes || "",
+//         selectedDates: selectedDates || [],
+//         selectedTime: selectedTime || "",
+//         selectedDiety: selectedDiety || "",
+//         includeSankalpam:
+//           service.includeSankalpam || service.rawItem?.includeSankalpam || "",
+//         rawItem: service.rawItem || service,
+//       };
+
+//       if (typeof insertItem === "function") {
+//         insertItem(cartPayload);
+//       }
+//     } else {
+//       // Remove the item from the global cart and clear its date/time/deity/qty/amount
+//       if (typeof removeItemFromCart === "function") {
+//         removeItemFromCart(serviceKey);
+//       }
+//       clearServiceSelection(serviceKey);
+//       return;
+//     }
+
+//     // Local state sync
+//     toggleCheckbox(service, checked);
+//   };
+
+//   const handleQuantityIncrease = () => {
+//     const nextQty = quantity + 1;
+//     incrementQuantity(serviceKey);
+//     if (isCheckedInCart && typeof updateQuantityInCart === "function") {
+//       updateQuantityInCart(serviceKey, nextQty);
+//     }
+//   };
+
+//   const handleQuantityDecrease = () => {
+//     const nextQty = Math.max(1, quantity - 1);
+//     decrementQuantity(serviceKey);
+//     if (isCheckedInCart && typeof updateQuantityInCart === "function") {
+//       updateQuantityInCart(serviceKey, nextQty);
+//     }
+//   };
+
+//   const isDatePickerOpen =
+//     activeModal === "DATE_PICKER" && activeModalServiceId === serviceKey;
+//   const isTimePickerOpen =
+//     activeModal === "TIME_PICKER" && activeModalServiceId === serviceKey;
+
+//   return (
+//     <div
+//       className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col overflow-hidden shadow-xs hover:shadow-md ${
+//         isGrey
+//           ? "opacity-60 grayscale pointer-events-none select-none border-gray-200"
+//           : isCheckedInCart
+//             ? "border-amber-400 ring-2 ring-amber-400/30"
+//             : "border-gray-200"
+//       }`}
+//     >
+//       {/* Top Image */}
+//       <div className="relative h-48 bg-amber-50 overflow-hidden">
+//         <img
+//           src={
+//             !imageError && service.imageUrl ? service.imageUrl : FALLBACK_IMAGE
+//           }
+//           alt={service.title}
+//           loading="lazy"
+//           onError={() => setImageError(true)}
+//           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+//         />
+//       </div>
+
+//       {/* Body Content */}
+//       <div className="p-5 flex-1 flex flex-col justify-between">
+//         <div>
+//           <div className="flex items-start justify-between gap-3">
+//             <div className="space-y-1.5 flex-1">
+//               <h3 className="font-serif font-bold text-gray-900 text-base sm:text-lg leading-snug">
+//                 {service.title}
+//               </h3>
+
+//               {/* Amount Badge */}
+//               <div className="mt-1">
+//                 {isCustomAmount ? (
+//                   <span className="inline-block bg-amber-50 text-amber-800 border border-amber-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+//                     Flexible Amount
+//                   </span>
+//                 ) : (
+//                   <span className="inline-block bg-[#900000] text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-xs">
+//                     {currencySymbol}
+//                     {parsedServiceAmount.toFixed(2)}
+//                   </span>
+//                 )}
+//               </div>
+//             </div>
+
+//             {/* Checkbox */}
+//             <label className="flex items-center cursor-pointer pt-0.5">
+//               <input
+//                 type="checkbox"
+//                 checked={isCheckedInCart}
+//                 onChange={handleCheckboxChange}
+//                 aria-label={`Select ${service.title}`}
+//                 className="w-5 h-5 text-[#900000] rounded-md border-gray-300 focus:ring-[#900000] cursor-pointer"
+//               />
+//             </label>
+//           </div>
+
+//           {/* Description */}
+//           {service.description && (
+//             <div className="mt-2.5">
+//               <p className="text-xs text-gray-600 leading-relaxed">
+//                 {service.description}
+//               </p>
+//             </div>
+//           )}
+//         </div>
+
+//         {/* Interactive Slot Pickers & Modifiers */}
+//         <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
+//           {/* Diety Dropdown */}
+//           {isDietyDropdownVisible && (
+//             <div>
+//               <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
+//                 Select Diety
+//               </label>
+//               <select
+//                 value={selectedDiety}
+//                 onChange={(e) =>
+//                   updateSelectedDiety(serviceKey, e.target.value)
+//                 }
+//                 disabled={isDietiesLoading}
+//                 className="w-full bg-[#F8FAFC] border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#900000]/20 focus:border-[#900000] cursor-pointer"
+//               >
+//                 <option value="">--select diety--</option>
+//                 {dietyOptions.map((name, i) => (
+//                   <option key={`${name}-${i}`} value={name}>
+//                     {name}
+//                   </option>
+//                 ))}
+//               </select>
+//             </div>
+//           )}
+
+//           {/* Date Selector Trigger */}
+//           {isDTVisible && (
+//             <div className="flex items-center justify-between gap-2">
+//               <button
+//                 type="button"
+//                 disabled={isSlotLoading}
+//                 onClick={handleDateTap}
+//                 className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-amber-50 hover:border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+//               >
+//                 <svg
+//                   className="w-3.5 h-3.5 text-gray-500"
+//                   fill="none"
+//                   stroke="currentColor"
+//                   viewBox="0 0 24 24"
+//                 >
+//                   <path
+//                     strokeLinecap="round"
+//                     strokeLinejoin="round"
+//                     strokeWidth="2"
+//                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+//                   />
+//                 </svg>
+//                 <span>
+//                   {isSlotLoading
+//                     ? "Checking..."
+//                     : selectedDates.length > 0
+//                       ? "Change Date"
+//                       : "Choose Date"}
+//                 </span>
+//               </button>
+//               <span className="text-[11px] font-medium text-gray-600 truncate max-w-[150px]">
+//                 {selectedDates.length === 1
+//                   ? formatSlashDate(selectedDates[0])
+//                   : selectedDates.length > 1
+//                     ? `${formatSlashDate(selectedDates[0])} - ${formatSlashDate(
+//                         selectedDates[selectedDates.length - 1],
+//                       )}`
+//                     : "No date chosen"}
+//               </span>
+//             </div>
+//           )}
+
+//           {/* Time Selector Trigger */}
+//           {isTimeVisible && (
+//             <div className="flex items-center justify-between gap-2">
+//               <button
+//                 type="button"
+//                 onClick={handleTimeTap}
+//                 className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-amber-50 hover:border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+//               >
+//                 <svg
+//                   className="w-3.5 h-3.5 text-gray-500"
+//                   fill="none"
+//                   stroke="currentColor"
+//                   viewBox="0 0 24 24"
+//                 >
+//                   <path
+//                     strokeLinecap="round"
+//                     strokeLinejoin="round"
+//                     strokeWidth="2"
+//                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+//                   />
+//                 </svg>
+//                 <span>{selectedTime ? "Change Time" : "Choose Time"}</span>
+//               </button>
+//               <span className="text-[11px] font-medium text-gray-600">
+//                 {selectedTime || "No time chosen"}
+//               </span>
+//             </div>
+//           )}
+
+//           {/* Custom Amount Input Box */}
+//           {isCustomAmount && (
+//             <div>
+//               <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
+//                 Offering Amount ({currencySymbol})
+//               </label>
+//               <div className="relative">
+//                 <span className="absolute left-3 top-2 text-xs font-bold text-gray-400">
+//                   {currencySymbol}
+//                 </span>
+//                 <input
+//                   type="number"
+//                   min="1"
+//                   step="any"
+//                   value={
+//                     customAmountMap[serviceKey] !== undefined
+//                       ? customAmountMap[serviceKey]
+//                       : isCheckedInCart && cartItem?.amount > 0
+//                         ? String(cartItem.amount)
+//                         : ""
+//                   }
+//                   onChange={(e) => {
+//                     const nextVal = e.target.value;
+//                     updateCustomAmount(serviceKey, nextVal);
+//                     const parsedNext = parseFloat(nextVal);
+//                     if (
+//                       isCheckedInCart &&
+//                       Number.isFinite(parsedNext) &&
+//                       parsedNext > 0 &&
+//                       typeof insertItem === "function"
+//                     ) {
+//                       insertItem({
+//                         ...cartItem,
+//                         id: serviceKey,
+//                         amount: parsedNext,
+//                       });
+//                     }
+//                   }}
+//                   placeholder="Enter custom amount"
+//                   className="w-full pl-7 pr-3 py-1.5 text-xs font-semibold text-gray-800 bg-[#F8FAFC] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#900000] focus:bg-white transition-all"
+//                 />
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Quantity Stepper */}
+//           {showQtyCounter && (
+//             <div className="flex items-center justify-between pt-1">
+//               <span className="text-xs font-medium text-gray-600">
+//                 Quantity
+//               </span>
+//               <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
+//                 <button
+//                   type="button"
+//                   onClick={handleQuantityDecrease}
+//                   className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+//                 >
+//                   −
+//                 </button>
+//                 <span className="px-3 py-1 text-xs font-bold text-gray-900 bg-white">
+//                   {quantity}
+//                 </span>
+//                 <button
+//                   type="button"
+//                   onClick={handleQuantityIncrease}
+//                   className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+//                 >
+//                   +
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {/* Date Picker Modal */}
+//       <ServiceDatePickerModal
+//         isOpen={isDatePickerOpen}
+//         onClose={closeModal}
+//         serviceTitle={service.title}
+//         availableDates={availableDatesList}
+//         bookingLimitPerDay={service.bookingLimitPerDay}
+//         availabilityMap={availabilityMap}
+//         serviceOccurrencesNo={service.serviceOccurrencesNo}
+//         onSelectDate={(userSelectedDate) => {
+//           const finalDates = getSelectedOccurrences(
+//             userSelectedDate,
+//             service.serviceOccurrencesNo,
+//             availableDatesList,
+//           );
+//           updateSelectedDates(serviceKey, finalDates);
+//           closeModal();
+//         }}
+//       />
+
+//       {/* Time Picker Modal */}
+//       <ServiceTimePickerModal
+//         isOpen={isTimePickerOpen}
+//         onClose={closeModal}
+//         selectedDate={selectedDates[0]}
+//         onSelectTime={(timeStr) => {
+//           updateSelectedTime(serviceKey, timeStr);
+//           closeModal();
+//         }}
+//       />
+//     </div>
+//   );
+// };
+
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useServicesStore } from "../../store/useServicesStore";
 import { useGetDieties } from "../../hooks/queries/Services/Book_Services/useGetDieties";
@@ -39,9 +698,16 @@ const TITHI_KEYWORDS = Object.freeze([
 const FALLBACK_IMAGE =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240"><rect width="400" height="240" fill="%23fdf6ee"/><text x="50%" y="48%" font-family="serif" font-size="20" font-weight="bold" fill="%23900000" text-anchor="middle">HTKY TEMPLE</text><text x="50%" y="62%" font-family="sans-serif" font-size="12" fill="%23854d0e" text-anchor="middle">Temple Service</text></svg>';
 
-export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
+export const UniversalServiceCard = ({
+  service,
+  currencySymbol = "$",
+  facilityControl = null,
+}) => {
   const serviceKey = service.id;
-  const isGrey = checkIsServiceGreyScale(service);
+  const isFacilityMode = Boolean(facilityControl);
+  const isGrey = isFacilityMode
+    ? Boolean(facilityControl.isBlocked)
+    : checkIsServiceGreyScale(service);
   const abortControllerRef = useRef(null);
   const isMountedRef = useRef(true);
 
@@ -53,11 +719,13 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   ).toUpperCase();
 
   const isDonationItem =
-    resolvedCategoryRaw.includes("DONATION") ||
-    resolvedServiceTypeRaw.includes("DONATION");
+    !isFacilityMode &&
+    (resolvedCategoryRaw.includes("DONATION") ||
+      resolvedServiceTypeRaw.includes("DONATION"));
   const isRecurringDonation =
-    resolvedServiceTypeRaw.includes("RECURRING") ||
-    resolvedCategoryRaw.includes("RECURRING");
+    !isFacilityMode &&
+    (resolvedServiceTypeRaw.includes("RECURRING") ||
+      resolvedCategoryRaw.includes("RECURRING"));
 
   const globalInsertItem = useCartStore(
     (state) => state.insertItem || state.addItem || state.upsertItem,
@@ -87,11 +755,15 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
     : globalUpdateQuantity;
   const cartItems = isRecurringDonation ? recurringCartItems : globalCartItems;
 
-  const showQtyCounter = !isDonationItem && Boolean(service.qtyCounterEnabled);
+  const showQtyCounter = isFacilityMode
+    ? !isGrey && Boolean(service.qtyCounterEnabled)
+    : !isDonationItem && Boolean(service.qtyCounterEnabled);
 
-  const isCheckedInCart = cartItems.some((item) => item.id === serviceKey);
+  const isCheckedInCart = isFacilityMode
+    ? Boolean(facilityControl.isChecked)
+    : cartItems.some((item) => item.id === serviceKey);
 
-  // Master Diety list from API
+  // Master Diety list from API (skipped when in facilityMode)
   const { data: masterDieties = [], isLoading: isDietiesLoading } =
     useGetDieties();
 
@@ -112,14 +784,18 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const updateCustomAmount = useServicesStore(
     (state) => state.updateCustomAmount,
   );
-  const parsedServiceAmount =
-    parseFloat(
-      String(service?.amount ?? service?.serviceAmount ?? "0").replace(
-        /[^0-9.]/g,
-        "",
-      ),
-    ) || 0;
-  const isCustomAmount = parsedServiceAmount <= 0;
+
+  const parsedServiceAmount = isFacilityMode
+    ? isGrey
+      ? 0
+      : Number(facilityControl.unitPrice ?? service.amount ?? 0) || 0
+    : parseFloat(
+        String(service?.amount ?? service?.serviceAmount ?? "0").replace(
+          /[^0-9.]/g,
+          "",
+        ),
+      ) || 0;
+  const isCustomAmount = !isFacilityMode && parsedServiceAmount <= 0;
 
   // Zustand Store Actions
   const toggleCheckbox = useServicesStore((state) => state.toggleCheckbox);
@@ -149,9 +825,11 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const cartItem = cartItems.find(
     (item) => (item.id || item._id) === serviceKey,
   );
-  const quantity = cartItem
-    ? Number(cartItem.quantity) || 1
-    : categoryQuantitiesMap[serviceKey] || 1;
+  const quantity = isFacilityMode
+    ? Number(facilityControl.quantity) || 1
+    : cartItem
+      ? Number(cartItem.quantity) || 1
+      : categoryQuantitiesMap[serviceKey] || 1;
   const selectedDates = selectedDatesMap[serviceKey] || [];
   const selectedTime = selectedTimeMap[serviceKey] || "";
   const selectedDiety = selectedDietyMap[serviceKey] || "";
@@ -161,9 +839,10 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   const [isSlotLoading, setIsSlotLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const isDTVisible = Boolean(service?.isDTVisible);
-  const isTimeVisible = Boolean(service?.isTimeVisible);
-  const isDietyDropdownVisible = Boolean(service?.isDietySelected);
+  const isDTVisible = !isFacilityMode && Boolean(service?.isDTVisible);
+  const isTimeVisible = !isFacilityMode && Boolean(service?.isTimeVisible);
+  const isDietyDropdownVisible =
+    !isFacilityMode && Boolean(service?.isDietySelected);
 
   // Compute Diety Dropdown Options
   const dietyOptions = useMemo(() => {
@@ -258,16 +937,21 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   };
 
   const handleCheckboxChange = (e) => {
+    if (isFacilityMode) {
+      if (!isGrey && typeof facilityControl.onToggleSelect === "function") {
+        facilityControl.onToggleSelect();
+      }
+      return;
+    }
+
     const checked = e.target.checked;
 
     if (checked) {
-      // Deity validation check
       if (isDietyDropdownVisible && !selectedDiety) {
         showToast("Please select a diety from the dropdown.", "warning");
         return;
       }
 
-      // Date validation check
       if (isDTVisible && selectedDates.length === 0) {
         showToast(
           "Please select a date to proceed with this service.",
@@ -276,8 +960,6 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         return;
       }
 
-      // Add the item to the global cart store
-      // Flexible / Custom Amount validation check
       const rawInputAmt =
         customAmountMap[serviceKey] !== undefined
           ? customAmountMap[serviceKey]
@@ -301,7 +983,6 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         "IN-TEMPLE";
       const upperCat = String(resolvedCategoryType).toUpperCase();
       const isSponsorshipItem = upperCat.includes("SPONSOR");
-      const isDonationItem = upperCat.includes("DONATION");
       const isEventItem = upperCat.includes("EVENT");
 
       const resolvedDisplayCategory = isSponsorshipItem
@@ -349,7 +1030,6 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
         insertItem(cartPayload);
       }
     } else {
-      // Remove the item from the global cart and clear its date/time/deity/qty/amount
       if (typeof removeItemFromCart === "function") {
         removeItemFromCart(serviceKey);
       }
@@ -357,11 +1037,17 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       return;
     }
 
-    // Local state sync
     toggleCheckbox(service, checked);
   };
 
   const handleQuantityIncrease = () => {
+    if (isFacilityMode) {
+      if (!isGrey && typeof facilityControl.onIncreaseQty === "function") {
+        facilityControl.onIncreaseQty();
+      }
+      return;
+    }
+
     const nextQty = quantity + 1;
     incrementQuantity(serviceKey);
     if (isCheckedInCart && typeof updateQuantityInCart === "function") {
@@ -370,6 +1056,13 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   };
 
   const handleQuantityDecrease = () => {
+    if (isFacilityMode) {
+      if (!isGrey && typeof facilityControl.onDecreaseQty === "function") {
+        facilityControl.onDecreaseQty();
+      }
+      return;
+    }
+
     const nextQty = Math.max(1, quantity - 1);
     decrementQuantity(serviceKey);
     if (isCheckedInCart && typeof updateQuantityInCart === "function") {
@@ -378,15 +1071,29 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
   };
 
   const isDatePickerOpen =
-    activeModal === "DATE_PICKER" && activeModalServiceId === serviceKey;
+    !isFacilityMode &&
+    activeModal === "DATE_PICKER" &&
+    activeModalServiceId === serviceKey;
   const isTimePickerOpen =
-    activeModal === "TIME_PICKER" && activeModalServiceId === serviceKey;
+    !isFacilityMode &&
+    activeModal === "TIME_PICKER" &&
+    activeModalServiceId === serviceKey;
+
+  const displayAmount = isFacilityMode
+    ? parsedServiceAmount * quantity
+    : parsedServiceAmount;
+
+  const showFacilityTimeRange =
+    isFacilityMode &&
+    !isGrey &&
+    Boolean(facilityControl.isDTVisible) &&
+    Boolean(facilityControl.selectedTierKey);
 
   return (
     <div
       className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col overflow-hidden shadow-xs hover:shadow-md ${
         isGrey
-          ? "opacity-60 grayscale pointer-events-none select-none border-gray-200"
+          ? "opacity-65 grayscale pointer-events-none select-none border-gray-200 bg-stone-50"
           : isCheckedInCart
             ? "border-amber-400 ring-2 ring-amber-400/30"
             : "border-gray-200"
@@ -403,6 +1110,26 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
           onError={() => setImageError(true)}
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
         />
+
+        {isFacilityMode && isGrey && (
+          <span className="absolute top-3 left-3 bg-stone-800/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+            Not Available
+          </span>
+        )}
+
+        {isFacilityMode &&
+          !isGrey &&
+          Number(facilityControl.isAvailableCode) === 3 && (
+            <span
+              className={`absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-xs ${
+                Number(facilityControl.availableCount) > 0
+                  ? "bg-emerald-600 text-white"
+                  : "bg-red-600 text-white"
+              }`}
+            >
+              Avl. {Number(facilityControl.availableCount) || 0}
+            </span>
+          )}
       </div>
 
       {/* Body Content */}
@@ -421,24 +1148,49 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
                     Flexible Amount
                   </span>
                 ) : (
-                  <span className="inline-block bg-[#900000] text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-xs">
+                  <span
+                    className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-xs ${
+                      isGrey ? "bg-stone-600" : "bg-[#900000]"
+                    }`}
+                  >
                     {currencySymbol}
-                    {parsedServiceAmount.toFixed(2)}
+                    {displayAmount.toFixed(2)}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Checkbox */}
-            <label className="flex items-center cursor-pointer pt-0.5">
-              <input
-                type="checkbox"
-                checked={isCheckedInCart}
-                onChange={handleCheckboxChange}
-                aria-label={`Select ${service.title}`}
-                className="w-5 h-5 text-[#900000] rounded-md border-gray-300 focus:ring-[#900000] cursor-pointer"
-              />
-            </label>
+            {/* Checkbox or Blocked Indicator */}
+            {isFacilityMode && isGrey ? (
+              <span
+                title={facilityControl.availabilityMessage || "Not Available"}
+                className="w-5 h-5 mt-0.5 rounded-full border-2 border-red-400 text-red-500 flex items-center justify-center text-[11px] font-extrabold"
+                aria-label="Unavailable"
+              >
+                ✕
+              </span>
+            ) : (
+              <label
+                className={`flex items-center pt-0.5 ${
+                  isGrey ||
+                  (isFacilityMode && facilityControl.isCheckboxDisabled)
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isCheckedInCart}
+                  disabled={Boolean(
+                    isGrey ||
+                    (isFacilityMode && facilityControl.isCheckboxDisabled),
+                  )}
+                  onChange={handleCheckboxChange}
+                  aria-label={`Select ${service.title}`}
+                  className="w-5 h-5 text-[#900000] rounded-md border-gray-300 focus:ring-[#900000] cursor-pointer disabled:cursor-not-allowed"
+                />
+              </label>
+            )}
           </div>
 
           {/* Description */}
@@ -449,10 +1201,139 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
               </p>
             </div>
           )}
+
+          {/* Facility Availability Warning (e.g. "Not Available due to capacity") */}
+          {isFacilityMode && isGrey && facilityControl.availabilityMessage && (
+            <p className="mt-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">
+              {facilityControl.availabilityMessage}
+            </p>
+          )}
         </div>
 
         {/* Interactive Slot Pickers & Modifiers */}
         <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
+          {/* Facility Tier (`Select Type`) Dropdown */}
+          {isFacilityMode &&
+            !isGrey &&
+            Array.isArray(facilityControl.priceTypes) &&
+            facilityControl.priceTypes.length > 0 && (
+              <div>
+                <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-1">
+                  Select Duration Type
+                </label>
+                <select
+                  value={facilityControl.selectedTierKey || ""}
+                  onChange={(e) =>
+                    facilityControl.onSelectTier?.(e.target.value)
+                  }
+                  className="w-full bg-[#F8FAFC] border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#900000]/20 focus:border-[#900000] cursor-pointer"
+                >
+                  <option value="" disabled>
+                    Select Type
+                  </option>
+                  {facilityControl.priceTypes.map((tier) => (
+                    <option key={tier.key} value={tier.key}>
+                      {tier.key} ({currencySymbol}
+                      {tier.value})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+          {/* Facility Shift Time (`From` / `To`) */}
+          {showFacilityTimeRange && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                  {facilityControl.isShiftLocked
+                    ? `${facilityControl.selectedTierKey} Shift`
+                    : facilityControl.minHours > 0 &&
+                        facilityControl.maxHours > facilityControl.minHours
+                      ? `Min ${facilityControl.minHours}h – Max ${facilityControl.maxHours}h`
+                      : facilityControl.minHours > 0
+                        ? `Duration: ${facilityControl.minHours} hr${
+                            facilityControl.minHours > 1 ? "s" : ""
+                          }`
+                        : "Rental Timing"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
+                    From Time
+                  </label>
+                  <input
+                    type="time"
+                    readOnly
+                    disabled
+                    aria-readonly="true"
+                    title="Change Event Time in Step 1 (Event Details)"
+                    value={facilityControl.startTime || ""}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold outline-none bg-stone-100 text-stone-600 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
+                    To Time
+                  </label>
+                  {!facilityControl.isShiftLocked &&
+                  Array.isArray(facilityControl.endTimeSlots) &&
+                  facilityControl.endTimeSlots.length > 1 ? (
+                    <select
+                      value={facilityControl.endTime || ""}
+                      onChange={(e) =>
+                        facilityControl.onChangeTime?.(
+                          "endTime",
+                          e.target.value,
+                        )
+                      }
+                      className="w-full bg-[#F8FAFC] border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold text-gray-800 outline-none focus:border-[#900000] cursor-pointer"
+                    >
+                      {facilityControl.endTimeSlots.map((slot) => (
+                        <option key={slot.value24} value={slot.value24}>
+                          {slot.label12}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="time"
+                      disabled={
+                        Boolean(facilityControl.isShiftLocked) ||
+                        (facilityControl.minHours > 0 &&
+                          facilityControl.minHours === facilityControl.maxHours)
+                      }
+                      value={facilityControl.endTime || ""}
+                      onChange={(e) =>
+                        facilityControl.onChangeTime?.(
+                          "endTime",
+                          e.target.value,
+                        )
+                      }
+                      className={`w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold outline-none ${
+                        facilityControl.isShiftLocked ||
+                        (facilityControl.minHours > 0 &&
+                          facilityControl.minHours === facilityControl.maxHours)
+                          ? "bg-stone-100 text-stone-600 cursor-not-allowed"
+                          : "bg-[#F8FAFC] text-gray-800 focus:border-[#900000]"
+                      }`}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Facility Shift Overlap / Temple Hours Error */}
+          {isFacilityMode && !isGrey && facilityControl.timeError && (
+            <p className="text-[11px] font-semibold text-red-600">
+              {facilityControl.timeError}
+            </p>
+          )}
+
           {/* Diety Dropdown */}
           {isDietyDropdownVisible && (
             <div>
@@ -624,35 +1505,39 @@ export const UniversalServiceCard = ({ service, currencySymbol = "$" }) => {
       </div>
 
       {/* Date Picker Modal */}
-      <ServiceDatePickerModal
-        isOpen={isDatePickerOpen}
-        onClose={closeModal}
-        serviceTitle={service.title}
-        availableDates={availableDatesList}
-        bookingLimitPerDay={service.bookingLimitPerDay}
-        availabilityMap={availabilityMap}
-        serviceOccurrencesNo={service.serviceOccurrencesNo}
-        onSelectDate={(userSelectedDate) => {
-          const finalDates = getSelectedOccurrences(
-            userSelectedDate,
-            service.serviceOccurrencesNo,
-            availableDatesList,
-          );
-          updateSelectedDates(serviceKey, finalDates);
-          closeModal();
-        }}
-      />
+      {!isFacilityMode && (
+        <ServiceDatePickerModal
+          isOpen={isDatePickerOpen}
+          onClose={closeModal}
+          serviceTitle={service.title}
+          availableDates={availableDatesList}
+          bookingLimitPerDay={service.bookingLimitPerDay}
+          availabilityMap={availabilityMap}
+          serviceOccurrencesNo={service.serviceOccurrencesNo}
+          onSelectDate={(userSelectedDate) => {
+            const finalDates = getSelectedOccurrences(
+              userSelectedDate,
+              service.serviceOccurrencesNo,
+              availableDatesList,
+            );
+            updateSelectedDates(serviceKey, finalDates);
+            closeModal();
+          }}
+        />
+      )}
 
       {/* Time Picker Modal */}
-      <ServiceTimePickerModal
-        isOpen={isTimePickerOpen}
-        onClose={closeModal}
-        selectedDate={selectedDates[0]}
-        onSelectTime={(timeStr) => {
-          updateSelectedTime(serviceKey, timeStr);
-          closeModal();
-        }}
-      />
+      {!isFacilityMode && (
+        <ServiceTimePickerModal
+          isOpen={isTimePickerOpen}
+          onClose={closeModal}
+          selectedDate={selectedDates[0]}
+          onSelectTime={(timeStr) => {
+            updateSelectedTime(serviceKey, timeStr);
+            closeModal();
+          }}
+        />
+      )}
     </div>
   );
 };
