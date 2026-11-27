@@ -77,10 +77,10 @@ export const PaymentSuccess = () => {
   useEffect(() => {
     if (isValidTransaction) {
       clearCart();
-      // Refetch user profile bookings, seva schedules, and calendar entries
-      queryClient.invalidateQueries({ queryKey: ["devoteeBookings"] });
-      queryClient.invalidateQueries({ queryKey: ["cartSession"] });
-      queryClient.invalidateQueries({ queryKey: ["devoteeDetails"] });
+      // // Refetch user profile bookings, seva schedules, and calendar entries
+      // queryClient.invalidateQueries({ queryKey: ["devoteeBookings"] });
+      // queryClient.invalidateQueries({ queryKey: ["cartSession"] });
+      // queryClient.invalidateQueries({ queryKey: ["devoteeDetails"] });
     }
   }, [isValidTransaction, clearCart, queryClient]);
 
