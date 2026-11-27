@@ -32,6 +32,9 @@ export const ROUTES = Object.freeze({
     communityEvents: "/community-events",
     newsletters: "/newsletters",
 
+    // ================= FACILITIES =================
+    facilities: "/facilities",
+
     // ================= EDUCATION =================
     education: "/all-classes",
     hinduSchool: "/all-classes",
