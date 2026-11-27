@@ -76,4 +76,7 @@ export const ENDPOINTS = Object.freeze({
     GET_CLIENT_INFO_BY_ID: "api/webgen/getclientInfoById",
     GET_PRIEST_AVAILABILITY_NEW: "api/priest/getpriestAvailbilityNew",
     GET_FACILITY_AVAILABILITY: "api/facility/getfacilityAvailbility",
+    GET_RECURRING_DATA: 'api/analytics/getrecurringData',
+    UPDATE_RECURRING_DATA: 'api/analytics/updateRecurringData',
+    SEND_YEARLY_TAX_LETTER_PDF: 'api/emailSend/sendBookingDataPdfOnMail',
 });
