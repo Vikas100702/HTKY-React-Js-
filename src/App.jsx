@@ -766,6 +766,7 @@ import {
   RouterProvider,
   Navigate,
   useRouteError,
+  useNavigate,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MainLayout } from "./components/layout/MainLayout";
@@ -918,6 +919,36 @@ const MyPaymentsPage = lazy(() =>
   import("./pages/Dashboard/MyPayments").then((m) => ({
     default: m.MyPayments,
   })),
+);
+
+const MyRecurringDonations = lazy(() =>
+  import("./pages/Dashboard/MyRecurringDonations").then((m) => ({
+    default: m.MyRecurringDonations,
+  })),
+);
+
+const YearlyTaxLetterRouteModal = lazy(() =>
+  import("./components/dashboard/YearlyTaxLetterModal").then((m) => {
+    const ModalComp = m.YearlyTaxLetterModal;
+    return {
+      default: function YearlyTaxLetterRouteWrapper() {
+        const navigate = useNavigate();
+        return (
+          <>
+            <Suspense fallback={<RouteSuspenseFallback />}>
+              <DashboardPage />
+            </Suspense>
+            <ModalComp
+              isOpen={true}
+              onClose={() =>
+                navigate(ROUTES.accountDashboard, { replace: true })
+              }
+            />
+          </>
+        );
+      },
+    };
+  }),
 );
 
 const PaymentReceiptViewPage = lazy(() =>
@@ -1287,6 +1318,29 @@ const router = createBrowserRouter([
               <ErrorBoundary name="MyPaymentsPage">
                 <Suspense fallback={<RouteSuspenseFallback />}>
                   <MyPaymentsPage />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: toChildRoute(
+              ROUTES.accountRecurringDonations,
+              ROUTES.account,
+            ),
+            element: (
+              <ErrorBoundary name="MyRecurringDonations">
+                <Suspense fallback={<RouteSuspenseFallback />}>
+                  <MyRecurringDonations />
+                </Suspense>
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: toChildRoute(ROUTES.accountYearlyTaxLetter, ROUTES.account),
+            element: (
+              <ErrorBoundary name="YearlyTaxLetterModal">
+                <Suspense fallback={null}>
+                  <YearlyTaxLetterRouteModal />
                 </Suspense>
               </ErrorBoundary>
             ),
