@@ -128,13 +128,6 @@ export const fetchServiceScheduleSummary = async (
     };
 }
 
-/**
-* Safely unwraps nested `{ data: { ... } }` or `{ result: { ... } }` envelopes
-* without mistaking a `data: [...]` records array for the envelope wrapper.
-*
-* @param {any} rawResponse
-* @returns {Object}
-*/
 const unwrapApiEnvelope = (rawResponse) => {
     const step1 =
         rawResponse &&
@@ -153,14 +146,6 @@ const unwrapApiEnvelope = (rawResponse) => {
         : step1;
 };
 
-/**
- * Resolves total record count using explicit `Count` / `count` when valid,
- * falling back to `records.length` if the count key is omitted or mismatched.
- *
- * @param {Object} root
- * @param {Array<Object>} records
- * @returns {number}
- */
 const resolveRecordCount = (root, records) => {
     const rawCount = root?.Count ?? root?.count;
     const parsedCount = Number(rawCount);
@@ -221,19 +206,6 @@ export const fetchMySponsors = (params, options) =>
         options
     );
 
-/**
-* Fetches the devotee's payment transactions from `api/appgen/filterAPI`
-* (`moduleName: "Payments"`, `aspectType: "Payments"`).
-*
-* @param {Object} params
-* @param {string} params.memberId - Logged-in devotee MongoDB `_id`
-* @param {string} [params.userName=""] - Optional devotee full name
-* @param {number} [params.skip=0]
-* @param {number} [params.next=1220]
-* @param {Object} [options]
-* @param {AbortSignal} [options.signal]
-* @returns {Promise<{ count: number, records: Array<Object> }>}
-*/
 export const fetchMyPayments = async (
     { memberId, userName = "", skip = 0, next = 1220 },
     { signal } = {}
@@ -273,17 +245,6 @@ export const fetchMyPayments = async (
     };
 };
 
-/**
- * Fetches the devotee's recurring donation schedules from `api/analytics/getrecurringData`.
- *
- * @param {Object} params
- * @param {string} params.memberId - Logged-in devotee MongoDB `_id`
- * @param {string} [params.startDate=""]
- * @param {string} [params.endDate=""]
- * @param {Object} [options]
- * @param {AbortSignal} [options.signal]
- * @returns {Promise<{ count: number, records: Array<Object> }>}
- */
 export const fetchRecurringDonations = async (
     { memberId, startDate = "", endDate = "" },
     { signal } = {}
@@ -300,7 +261,7 @@ export const fetchRecurringDonations = async (
     };
 
     const endpoint =
-        ENDPOINTS.GET_RECURRING_DATA || "api/analytics/getrecurringData";
+        ENDPOINTS.GET_RECURRING_DATA;
 
     const rawResponse = await apiClient.post(endpoint, payload, {
         signal,
@@ -317,6 +278,105 @@ export const fetchRecurringDonations = async (
     };
 };
 
+export const updateRecurringDonationStatus = async (
+    { recurringId, memberId, status = "INACTIVE" },
+    { signal } = {}
+) => {
+    if (!recurringId || !memberId) {
+        throw new Error("Missing recurring pledge ID or devotee member ID.");
+    }
+
+    const payload = {
+        recurringId: String(recurringId).trim(),
+        memberId: String(memberId).trim(),
+        clientId: ENV_CONFIG.CLIENT_ID,
+        status: String(status).trim().toUpperCase(),
+    };
+
+    const endpoint =
+        ENDPOINTS.UPDATE_RECURRING_DATA;
+
+    const rawResponse = await apiClient.post(endpoint, payload, {
+        signal,
+        pre: true,
+    });
+
+    const root = unwrapApiEnvelope(rawResponse);
+    const statusCode = Number(root?.statusCode ?? rawResponse?.statusCode ?? 0);
+
+    if (statusCode !== 1) {
+        const errMsg =
+            root?.message ||
+            root?.msg ||
+            rawResponse?.message ||
+            "Failed to update recurring donation status.";
+        throw new Error(errMsg);
+    }
+
+    return {
+        statusCode: 1,
+        message: root?.message || root?.msg || "Updated successfully",
+        data: root?.data || null,
+    };
+};
+
+export const sendYearlyTaxLetterPdf = async (
+    { memberId, emailId, year, userID = "" },
+    { signal } = {}
+) => {
+    if (!memberId) {
+        throw new Error("Devotee member ID is missing. Please sign in again.");
+    }
+    if (!emailId || !String(emailId).includes("@")) {
+        throw new Error("A valid registered email address is required.");
+    }
+    if (!year) {
+        throw new Error("Please select a tax year.");
+    }
+
+    const payload = {
+        userID: String(userID || ""),
+        memberId: String(memberId).trim(),
+        emailId: String(emailId).trim(),
+        clientId: ENV_CONFIG.CLIENT_ID,
+        year: String(year).trim(),
+    };
+
+    const endpoint =
+        ENDPOINTS.SEND_YEARLY_TAX_LETTER_PDF;
+
+    const rawResponse = await apiClient.post(endpoint, payload, {
+        signal,
+        pre: true,
+    });
+
+    const root = unwrapApiEnvelope(rawResponse);
+    const statusCode = Number(root?.statusCode ?? rawResponse?.statusCode ?? 0);
+
+    if (statusCode !== 1) {
+        const errMsg =
+            root?.message ||
+            root?.msg ||
+            rawResponse?.message ||
+            "Failed to send Yearly Tax Letter PDF on email.";
+        throw new Error(errMsg);
+    }
+
+    const dataRecords = Array.isArray(root?.data)
+        ? root.data
+        : Array.isArray(root?.result)
+            ? root.result
+            : [];
+
+    return {
+        statusCode: 1,
+        message:
+            root?.message ||
+            `Yearly tax letter for ${payload.year} has been sent to ${payload.emailId}.`,
+        records: dataRecords,
+    };
+};
+
 export default {
     getCurrentMonthDateRange,
     fetchCumulativeAmount,
@@ -326,4 +386,6 @@ export default {
     fetchMySponsors,
     fetchMyPayments,
     fetchRecurringDonations,
+    updateRecurringDonationStatus,
+    sendYearlyTaxLetterPdf,
 };
