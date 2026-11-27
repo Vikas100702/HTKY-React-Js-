@@ -39,6 +39,7 @@ export const ENDPOINTS = Object.freeze({
     VOLUNTEER_SIGNUP_API: 'api/volunteer/addVolunteer',
     GET_THITHI_NEXT_90_DAYS: '/api/event/getThithiNext90Days',
     CLIENT_SETTINGS: '/api/appsettings/setting',
+    GET_SETTINGS_API: "api/settings/getSettings",
     GET_SERVICE_AVAILABILITY: '/api/bookingService/getServiceAvailability',
     SERVICE_AVAILABILITY: 'api/service-availability',
     GET_COMPANY_DETAILS: 'api/auth/getCompanyDetails',
@@ -56,6 +57,7 @@ export const ENDPOINTS = Object.freeze({
     GET_EVENT_CART_DETAIL: 'api/bookingService/getEventCartDetail',
     ADD_SERVICE_CART_TEMP: 'api/bookingService/addServiceCartTemp',
     ADD_TO_CART: 'api/bookingService/addServiceCart',
+    ADD_RENTAL_SERVICE_CART: 'api/bookingService/addRentalServiceCart',
     REMOVE_EXPIRED_SERVICES: 'common/removeExpiredServices',
     MPI_PAY_NOW: 'MPI_Payments/Paynow',
     MPI_PAY_NOW_TEST: 'MPI_Payments/PaynowTest',
@@ -71,4 +73,7 @@ export const ENDPOINTS = Object.freeze({
     VALIDATE_PAYMENT_CARD: 'api/payment/validatePaymentCard',
     ADD_PLEDGE_FORM: 'api/bookingService/addPledgeForm',
     GET_SERVICE_DETAIL_BY_ID: 'api/bookingService/getServiceDetailbyId',
+    GET_CLIENT_INFO_BY_ID: "api/webgen/getclientInfoById",
+    GET_PRIEST_AVAILABILITY_NEW: "api/priest/getpriestAvailbilityNew",
+    GET_FACILITY_AVAILABILITY: "api/facility/getfacilityAvailbility",
 });
