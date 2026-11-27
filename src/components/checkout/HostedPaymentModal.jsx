@@ -25,6 +25,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import { usePaymentGateway } from "../../hooks/queries/Common/usePaymentGateway";
 import { useCheckout } from "../../hooks/queries/Checkout/checkoutApi";
 import { decodeBase64 } from "../../utils/base64";
+import { ENV_CONFIG } from "../../config/envConfig";
 
 /**
  * Required CSS rules read by BridgePay's `tokenPay.js` when `useStyles: false` is configured.
@@ -73,6 +74,12 @@ export const HostedPaymentModal = ({
   devoteeProfile = null,
   acharyaSambhavana = 0,
   generalDonation = 0,
+  eventDetail = {},
+  serviceDetail = {},
+  securityDeposit = 0,
+  isFacilityBooking = false,
+  skipCartClear = false,
+  requireCaptcha = true,
   onSuccess,
 }) => {
   // Global Stores
@@ -102,6 +109,7 @@ export const HostedPaymentModal = ({
     processMpiPayment,
     processNmiPayment,
     finalizeOrder,
+    finalizeFacilityOrder,
     isProcessing: isPipelineProcessing,
   } = useCheckout();
 
@@ -140,12 +148,129 @@ export const HostedPaymentModal = ({
 
   const tokenpayInstanceRef = useRef(null);
 
+  const recaptchaContainerRef = useRef(null);
+  const recaptchaWidgetIdRef = useRef(null);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+
+  const recaptchaSiteKey = ENV_CONFIG.VITE_RECAPTCHA_SITE_KEY;
+
+  const resetCaptchaWidget = useCallback(() => {
+    setCaptchaToken("");
+    if (
+      recaptchaWidgetIdRef.current !== null &&
+      window.grecaptcha &&
+      typeof window.grecaptcha.reset === "function"
+    ) {
+      try {
+        window.grecaptcha.reset(recaptchaWidgetIdRef.current);
+      } catch {
+        // Ignore reset errors if widget was unmounted
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || !requireCaptcha || !isPaymentEnabled) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    const renderWidget = () => {
+      if (
+        isCancelled ||
+        !recaptchaContainerRef.current ||
+        !window.grecaptcha ||
+        typeof window.grecaptcha.render !== "function"
+      ) {
+        return;
+      }
+      if (recaptchaWidgetIdRef.current !== null) return;
+
+      try {
+        recaptchaContainerRef.current.innerHTML = "";
+        recaptchaWidgetIdRef.current = window.grecaptcha.render(
+          recaptchaContainerRef.current,
+          {
+            sitekey: recaptchaSiteKey,
+            callback: (token) => {
+              if (!isCancelled) {
+                setCaptchaToken(token || "");
+                setCaptchaError("");
+              }
+            },
+            "expired-callback": () => {
+              if (!isCancelled) {
+                setCaptchaToken("");
+              }
+            },
+            "error-callback": () => {
+              if (!isCancelled) {
+                setCaptchaToken("");
+                setCaptchaError("reCAPTCHA network error. Please try again.");
+              }
+            },
+          },
+        );
+      } catch (err) {
+        console.error("[HTKY_OBSERVABILITY][RECAPTCHA_RENDER_ERROR]", err);
+      }
+    };
+
+    if (window.grecaptcha && typeof window.grecaptcha.render === "function") {
+      renderWidget();
+    } else {
+      const existingScript = document.querySelector(
+        'script[src*="google.com/recaptcha/api.js"]',
+      );
+      if (!existingScript) {
+        const script = document.createElement("script");
+        script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          if (window.grecaptcha?.ready) {
+            window.grecaptcha.ready(renderWidget);
+          } else {
+            renderWidget();
+          }
+        };
+        document.body.appendChild(script);
+      } else {
+        const pollTimer = setInterval(() => {
+          if (window.grecaptcha?.render) {
+            clearInterval(pollTimer);
+            renderWidget();
+          }
+        }, 200);
+        return () => {
+          isCancelled = true;
+          clearInterval(pollTimer);
+        };
+      }
+    }
+
+    return () => {
+      isCancelled = true;
+      recaptchaWidgetIdRef.current = null;
+    };
+  }, [isOpen, requireCaptcha, isPaymentEnabled, recaptchaSiteKey]);
+
   const cardholderName = nameOverride ?? resolvedProfileName;
   const customerEmail = emailOverride ?? resolvedProfileEmail;
   const zipcode = zipOverride ?? resolvedProfileZip;
   const streetAddress = addressOverride ?? resolvedBillingAddress;
 
   const isBusy = isTokenizing || isPipelineProcessing;
+
+  const handleSafeClose = useCallback(() => {
+    setCaptchaToken("");
+    setCaptchaError("");
+    setModalError("");
+    setFormValidationErrors({});
+    onClose();
+  }, [onClose]);
 
   // Modal Stacking Lock Management
   useEffect(() => {
@@ -169,13 +294,13 @@ export const HostedPaymentModal = ({
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape" && !isBusy) {
-        onClose();
+        handleSafeClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isBusy, onClose]);
+  }, [isOpen, isBusy, handleSafeClose]);
 
   // Mount BridgePay (MPI) or NMI (Collect.js) Hosted Fields
   useEffect(() => {
@@ -285,17 +410,36 @@ export const HostedPaymentModal = ({
   // Sequential Order Reconciliation Helper (`AddToCart` -> `updateTransactionStatus`)
   const handleOrderReconciliation = useCallback(
     async ({ paymentSource, trnxId, mpiInvNumber, paymentResponse }) => {
-      const result = await finalizeOrder({
-        status: "COMPLETED",
-        paymentSource,
-        acharyaSambhavana,
-        generalDonation,
-        totalPrice: payableAmount,
-        mpiInvNumber: mpiInvNumber || invoiceNumber || String(Date.now()),
-        transactionId: trnxId,
-        paymentDescription: paymentResponse,
-        cartItems: activeCartItems,
-      });
+      const resolvedInvoice =
+        mpiInvNumber || invoiceNumber || String(Date.now());
+
+      const result = isFacilityBooking
+        ? await finalizeFacilityOrder({
+            status: "COMPLETED",
+            acharyaSambhavana,
+            generalDonation,
+            totalPrice: payableAmount,
+            securityDeposit,
+            mpiInvNumber: resolvedInvoice,
+            transactionId: trnxId,
+            cartItems: activeCartItems,
+            eventDetail,
+            serviceDetail,
+          })
+        : await finalizeOrder({
+            status: "COMPLETED",
+            paymentSource,
+            acharyaSambhavana,
+            generalDonation,
+            totalPrice: payableAmount,
+            mpiInvNumber: resolvedInvoice,
+            transactionId: trnxId,
+            paymentDescription: paymentResponse,
+            cartItems: activeCartItems,
+            eventDetail,
+            serviceDetail,
+            skipCartClear,
+          });
 
       showToast("Payment processed successfully!", "success");
 
@@ -305,15 +449,21 @@ export const HostedPaymentModal = ({
       onClose();
     },
     [
+      isFacilityBooking,
+      finalizeFacilityOrder,
       finalizeOrder,
       acharyaSambhavana,
       generalDonation,
       payableAmount,
+      securityDeposit,
       invoiceNumber,
       activeCartItems,
       showToast,
       onSuccess,
       onClose,
+      eventDetail,
+      serviceDetail,
+      skipCartClear,
     ],
   );
 
@@ -330,6 +480,11 @@ export const HostedPaymentModal = ({
     }
     if (activeGateway === "NMI" && !customerEmail.trim()) {
       errs.email = "Email address is required for receipt delivery.";
+    }
+
+    if (requireCaptcha && !captchaToken) {
+      setCaptchaError("Please verify that you are not a robot.");
+      errs.captcha = "Captcha verification required.";
     }
     setFormValidationErrors(errs);
     return Object.keys(errs).length === 0;
@@ -401,6 +556,7 @@ export const HostedPaymentModal = ({
               chargeResponse?.message ||
               "Payment card authorization failed.";
             setModalError(failReason);
+            if (requireCaptcha) resetCaptchaWidget();
           }
         } catch (apiErr) {
           setModalError(
@@ -408,6 +564,7 @@ export const HostedPaymentModal = ({
               apiErr?.message ||
               "BridgePay server communication failure.",
           );
+          if (requireCaptcha) resetCaptchaWidget();
         }
       },
       (errorResult) => {
@@ -483,6 +640,7 @@ export const HostedPaymentModal = ({
               chargeResponse?.message ||
               "NMI Card transaction declined.";
             setModalError(failReason);
+            if (requireCaptcha) resetCaptchaWidget();
           }
         } catch (apiErr) {
           setModalError(
@@ -490,6 +648,7 @@ export const HostedPaymentModal = ({
               apiErr?.message ||
               "NMI server communication failure.",
           );
+          if (requireCaptcha) resetCaptchaWidget();
         }
       },
     });
@@ -508,7 +667,7 @@ export const HostedPaymentModal = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="payment-modal-title"
-      onClick={() => !isBusy && onClose()}
+      onClick={() => !isBusy && handleSafeClose()}
     >
       {/* Inject BridgePay required hosted-field CSS classes */}
       <style>{BRIDGEPAY_HOSTED_STYLES}</style>
@@ -538,7 +697,7 @@ export const HostedPaymentModal = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleSafeClose}
             disabled={isBusy}
             className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Close payment modal"
@@ -580,7 +739,7 @@ export const HostedPaymentModal = ({
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleSafeClose}
                   className="w-full py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer"
                 >
                   Return to Checkout
@@ -750,6 +909,20 @@ export const HostedPaymentModal = ({
                 )}
               </div>
 
+              {requireCaptcha && (
+                <div className="pt-1">
+                  <div
+                    ref={recaptchaContainerRef}
+                    className="flex justify-center"
+                  />
+                  {captchaError && (
+                    <p className="text-[11px] text-red-600 font-semibold text-center mt-1">
+                      {captchaError}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Submit CTA */}
               <button
                 type="submit"
@@ -802,6 +975,12 @@ HostedPaymentModal.propTypes = {
   acharyaSambhavana: PropTypes.number,
   generalDonation: PropTypes.number,
   onSuccess: PropTypes.func,
+  eventDetail: PropTypes.object,
+  serviceDetail: PropTypes.object,
+  securityDeposit: PropTypes.number,
+  isFacilityBooking: PropTypes.bool,
+  skipCartClear: PropTypes.bool,
+  requireCaptcha: PropTypes.bool,
 };
 
 export default HostedPaymentModal;
