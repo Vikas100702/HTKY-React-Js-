@@ -418,7 +418,7 @@ const fetchClientSettings = async ({ signal }) => {
         const response = await apiClient.post(
             ENDPOINTS.CLIENT_SETTINGS,
             payload,
-            { signal, pre: false } // Settings API aspgen par hai
+            { signal } // Settings API aspgen par hai
         );
         return adaptClientSettings(response);
     } catch (error) {
@@ -453,7 +453,7 @@ const fetchServiceAvailability = async ({ queryKey, signal }) => {
         const response = await apiClient.post(
             ENDPOINTS.GET_SERVICE_AVAILABILITY,
             payload,
-            { signal, pre: true } 
+            { signal, pre: true }
         );
         return adaptServiceAvailability(response);
     } catch (error) {
