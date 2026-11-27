@@ -66,6 +66,8 @@ export const ROUTES = Object.freeze({
     accountDonations: "/account/donations",
     accountSponsors: "/account/sponsors",
     accountPayments: "/account/payments",
+    accountRecurringDonations: "/account/recurring-donations",
+    accountYearlyTaxLetter: "/account/yearly-tax-letter",
     accountPaymentReceipt: "/account/payments/receipt/:receiptId",
     accountProfile: "/account/profile",
 
